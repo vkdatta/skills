@@ -1,6 +1,6 @@
 {
   "name": "@vkdatta/skills",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "description": "Portable AI skills by VK Datta, distributed through npm and installable with the vkd-skills CLI.",
   "type": "module",
   "bin": {
