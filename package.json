@@ -1,0 +1,47 @@
+{
+  "name": "@vkdatta/skills",
+  "version": "0.0.1",
+  "description": "Portable AI skills by VK Datta, distributed through npm and installable with the vkd-skills CLI.",
+  "type": "module",
+  "bin": {
+    "vkd-skills": "./bin/vkd-skills.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "skills/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vkdatta/skills.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vkdatta/skills/issues"
+  },
+  "homepage": "https://github.com/vkdatta/skills",
+  "keywords": [
+    "ai",
+    "skills",
+    "agents",
+    "claude",
+    "chatgpt",
+    "gemini",
+    "cursor",
+    "canvas"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test",
+    "pack:check": "npm pack --dry-run",
+    "cli": "node ./bin/vkd-skills.js"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}
