@@ -1,0 +1,20 @@
+name: free-tier-cloudflare-workflow-architect
+version: 1.0.0
+display_name: Free-Tier Cloudflare Workflow Architect
+description: >
+  Designs, audits, decomposes, and hardens Cloudflare Workers + Workflows + R2
+  pipelines so a Free-plan user stays inside documented CPU, request, concurrency,
+  step, payload, state, memory, subrequest, R2 object, multipart, and operation
+  constraints. Uses the Klines downstream architecture as a reference pattern,
+  not as a collection of magic constants.
+tags:
+  - cloudflare
+  - workers
+  - workflows
+  - r2
+  - free-tier
+  - fanout
+  - concurrency
+  - batching
+  - distributed-systems
+  - architecture

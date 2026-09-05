@@ -1,0 +1,10 @@
+name: bug-audit-and-fix
+version: 2.0.1
+display_name: Bug Audit and Fix
+description: >
+  AI-agnostic two-stage engineering skill for deeply tracing, fixing,
+  refactoring, revamping, and independently validating bugs in any software
+  codebase. Specialized workflows such as Web UI/UX, Canvas, mobile, backend,
+  databases, security, performance, and language-specific analysis are
+  activated only when relevant and available.
+entrypoint: SKILL.md

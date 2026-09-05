@@ -86,17 +86,17 @@ Before broad source inspection, search for an existing architecture map.
 
 Preferred names, in order:
 
-1. `ARCHITECTURE.md`
+1. `canvas_xd.md`
 2. `architecture.md`
 3. `ARCHITECTURE_MINDMAP.md`
-4. `PROJECT_ARCHITECTURE.md`
+4. `PROJECT_canvas_xd.md`
 5. `PROJECT_MINDMAP.md`
 6. `ARCHITECTURE_MAP.md`
 7. `.architecture.md`
 
 Prefer exactly one authoritative architecture file. Do not create competing maps when one already exists.
 
-If none exists, create `ARCHITECTURE.md` before beginning a non-trivial code fix, patch, debugging pass, refactor, or feature task.
+If none exists, create `canvas_xd.md` before beginning a non-trivial code fix, patch, debugging pass, refactor, or feature task.
 
 ## Required Format
 
@@ -258,7 +258,7 @@ If no architecture file exists:
 6. identify external services;
 7. identify critical error paths and invariants;
 8. identify build/deployment boundaries;
-9. create `ARCHITECTURE.md` in the required mindmap format;
+9. create `canvas_xd.md` in the required mindmap format;
 10. use that map for the remainder of the task.
 
 Do not attempt to document every line of code.

@@ -1,0 +1,24 @@
+# Template: Workflow step budget
+
+fixed_steps:
+dynamic_steps_per_batch:
+poll_steps:
+cleanup_steps:
+retry_overhead:
+steps_per_instance:
+
+hard_limit_free: 1024
+daily_free_allowance: 3000
+
+jobs_per_day:
+steps_per_day:
+
+assertions:
+  per_instance_under_1024: true
+  daily_under_3000: true
+
+decomposition_if_failed:
+- split coordinator
+- use bounded wave workflows
+- replace per-child polling with compact completion markers
+- use sleep/event waiting rather than busy polling

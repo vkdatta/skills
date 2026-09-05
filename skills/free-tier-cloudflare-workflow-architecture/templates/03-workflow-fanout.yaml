@@ -1,0 +1,30 @@
+# Template: workflow/fan-out plan
+coordinator:
+  workflow: DataFetchWorkflow
+  responsibility: orchestration only
+
+wave:
+  workflow: FanOutWorkflow
+  size:
+  delay_ms:
+  max_polls:
+  poll_interval_ms:
+
+batch:
+  workflow: BatchWorker
+  work_unit:
+  target_cpu_ms: 7
+  hard_cpu_ms: 10
+  max_memory_mb:
+  output_key_pattern: jobs/{jobId}/batches/{batchId}/result.json
+
+merge:
+  workflow: MergeWorker
+  strategy: bounded-shards
+  final_storage: R2
+
+proof:
+  peak_running_instances:
+  peak_creation_rate:
+  max_steps_per_instance:
+  total_workflow_executions_per_job:

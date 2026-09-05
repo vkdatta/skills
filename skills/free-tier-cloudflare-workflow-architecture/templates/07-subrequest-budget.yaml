@@ -1,0 +1,25 @@
+# Template: subrequest budget
+
+per_batch:
+  external_fetch:
+  d1:
+  r2_get:
+  r2_put:
+  service_binding:
+  other:
+
+totals:
+  external:
+  internal_cloudflare:
+
+retries:
+  expected_multiplier:
+  worst_case_multiplier:
+
+worst_case:
+  external:
+  internal:
+
+assertions:
+  external_under_50: true
+  internal_under_1000: true

@@ -1,0 +1,6 @@
+name: webapps-ui-ux-functionality-audit
+version: 1.0.0
+display_name: Web Apps UI/UX & Functionality Audit
+description: >
+ Exhaustive, surgical audit skill for web applications covering UI, UX, interaction design, accessibility, responsiveness, visual consistency, browser-native UI replacement, functionality, performance, code structure, reuse, and cross-viewport behavior across desktop, tablet, mobile, portrait, and vertical layouts.
+entrypoint: SKILL.md

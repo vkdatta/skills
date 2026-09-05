@@ -1,0 +1,1642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Light Navigation — Departments</title>
+<script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+<style>
+
+/* ========================================================= RESET */
+*, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { background: #f3f3f3; color-scheme: light; }
+html, body { width: 100%; height: 100%; }
+body { margin: 0; background: #f3f3f3; color: #111; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; overflow: hidden; }
+
+/* ========================================================= APP */
+.app { width: 100%; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }
+
+/* ========================================================= MIDDLE ROW */
+.middle-row { flex: 1 1 auto; display: flex; flex-direction: row; min-height: 0; min-width: 0; }
+
+/* ========================================================= BAR GAP */
+.bar-gap { flex: 0 0 10px; background: transparent; transition: flex-basis 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
+.bar-gap.bar-off { flex-basis: 0 !important; overflow: hidden; }
+
+/* ========================================================= BAR REGION */
+.bar-region { position: relative; z-index: 1000; flex: 0 0 auto; overflow: hidden; }
+.bar-region.bar-off { display: none; }
+
+/* Closed bars collapse completely; the edge floater in the main panel is their opener. */
+.bar-region.is-closed .bar-wrapper { padding: 0; border-color: transparent; border-radius: 0; }
+.bar-h.is-closed .bar-wrapper { width: 100%; height: 0; }
+.bar-v.is-closed .bar-wrapper { width: 0; height: 100%; }
+
+/* The gap collapses with a closed bar, so a closed bar consumes no workspace. */
+.bar-gap.bar-closed { flex-basis: 0 !important; overflow: hidden; }
+
+/* ========================================================= BAR WRAPPER */
+.bar-wrapper { position: relative; display: flex; align-items: center; padding: 5px; background: #fff; border: 1px solid #dedede; border-radius: 19px; overflow: hidden; transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1), height 0.35s cubic-bezier(0.4, 0, 0.2, 1), padding 0.35s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
+
+.bar-expand {
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  opacity: 1;
+  transition: background .16s ease, color .16s ease, transform .16s ease, opacity .3s ease, width .35s cubic-bezier(0.4, 0, 0.2, 1), height .35s cubic-bezier(0.4, 0, 0.2, 1), flex-basis .35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.bar-expand:hover { background: #f1f1f1; color: #111; }
+.bar-expand:active { transform: scale(.9); }
+.bar-expand:focus-visible { outline: 2px solid #111; outline-offset: -4px; }
+.bar-expand svg { width: 18px; height: 18px; stroke-width: 1.8; pointer-events: none; }
+
+/* Closed bars hide their internal controls while preserving the slow collapse animation. */
+.bar-h.is-closed .bar-expand {
+  opacity: 0;
+  pointer-events: none;
+  flex-basis: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+.bar-v.is-closed .bar-expand {
+  opacity: 0;
+  pointer-events: none;
+  flex-basis: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* ========================================================= HORIZONTAL BARS (top / bottom) */
+.bar-h { width: 100%; }
+.bar-h .bar-wrapper { flex-direction: row; width: 100%; height: 64px; }
+.bar-h.is-closed .bar-nav-area { opacity: 0; pointer-events: none; flex: 0; width: 0; min-width: 0; overflow: hidden; }
+.bar-h.is-closed .bar-corner-toggle { opacity: 0; pointer-events: none; flex: 0; width: 0; min-width: 0; overflow: hidden; }
+
+/* ========================================================= VERTICAL BARS (left / right) */
+.bar-v { align-self: stretch; }
+.bar-v .bar-wrapper { flex-direction: column; width: 64px; height: 100%; min-height: 0; }
+.bar-v.is-closed .bar-nav-area { opacity: 0; pointer-events: none; flex: 0; height: 0; min-height: 0; overflow: hidden; }
+.bar-v.is-closed .bar-corner-toggle { opacity: 0; pointer-events: none; flex: 0; height: 0; min-height: 0; overflow: hidden; }
+
+/* ========================================================= BAR NAV AREA */
+.bar-nav-area { position: relative; flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; background: transparent; pointer-events: auto; transition: opacity 0.3s ease, flex 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
+.bar-v .bar-nav-area { flex-direction: column; }
+
+/* ========================================================= BAR SCROLL */
+.bar-scroll { position: relative; z-index: 2; display: flex; align-items: center; justify-content: center; scrollbar-width: none; scroll-behavior: smooth; }
+.bar-scroll::-webkit-scrollbar { display: none; }
+.bar-scroll.nested-transition { transition: opacity .22s ease, transform .35s cubic-bezier(.4,0,.2,1); }
+.bar-scroll.nested-leaving { opacity: 0; transform: translateX(-10px); }
+.bar-v .bar-scroll.nested-leaving { transform: translateY(-10px); }
+.expanded-drill-item .nested-drag { width: 14px; height: 14px; color: #aaa; opacity: .45; cursor: grab; flex-shrink: 0; }
+.expanded-drill-item:hover .nested-drag { opacity: 1; }
+.expanded-drill-item .nested-eye { width: 15px; height: 15px; color: #999; flex-shrink: 0; }
+.expanded-drill-eye { display: grid; place-items: center; padding: 4px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; }
+.expanded-drill-eye:hover { background: #e7e7e7; }
+.expanded-drill-item.is-dragging { opacity: .4; background: #e0e0e0; }
+.expanded-drill-item.is-dragover { background: #f1f1f1; outline: 2px dashed #111; outline-offset: -2px; }
+
+/* Horizontal */
+.bar-h .bar-scroll { flex-direction: row; width: auto; max-width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; touch-action: pan-x; }
+.bar-h .bar-scroll.has-overflow { justify-content: flex-start; }
+/* Vertical */
+.bar-v .bar-scroll { flex-direction: column; height: auto; max-height: 100%; width: 100%; overflow-y: auto; overflow-x: hidden; touch-action: pan-y; }
+.bar-v .bar-scroll.has-overflow { justify-content: flex-start; }
+
+/* ========================================================= ICON ITEMS */
+.icon-item { position: relative; flex: 0 0 42px; display: grid; place-items: center; padding: 0; margin: 0; border: 0; outline: 0; border-radius: 10px; background: transparent; color: #888; cursor: pointer; transition: color .16s ease, transform .16s ease, background .16s ease; }
+.bar-h .icon-item { width: 42px; height: 52px; }
+.bar-v .icon-item { width: 52px; height: 42px; flex: 0 0 42px; }
+.icon-item:hover { color: #111; background: #f7f7f7; }
+.icon-item:active { transform: scale(.88); }
+.icon-item:focus-visible { outline: 2px solid #111; outline-offset: -6px; }
+.icon-item svg { width: 19px; height: 19px; stroke-width: 1.9; pointer-events: none; }
+.icon-item.active { color: #111; }
+/* Active dot — horizontal */
+.bar-h .icon-item.active::after { content: ""; position: absolute; left: 50%; bottom: 6px; width: 15px; height: 2px; transform: translateX(-50%); border-radius: 999px; background: #111; }
+/* Active dot — left bar (indicator on right = toward content) */
+.bar-left .icon-item.active::after { content: ""; position: absolute; right: 5px; top: 50%; width: 2px; height: 15px; transform: translateY(-50%); border-radius: 999px; background: #111; }
+/* Active dot — right bar (indicator on left = toward content) */
+.bar-right .icon-item.active::after { content: ""; position: absolute; left: 5px; top: 50%; width: 2px; height: 15px; transform: translateY(-50%); border-radius: 999px; background: #111; }
+
+/* ========================================================= DEPT DIVIDER (multi-dept gap) */
+.dept-divider { flex: 0 0 auto; background: #d8d8d8; border-radius: 999px; }
+.bar-h .dept-divider { width: 1px; height: 26px; margin: 0 4px; }
+.bar-v .dept-divider { height: 1px; width: 26px; margin: 4px 0; }
+
+/* ========================================================= SCROLL PROGRESS */
+.scroll-progress { position: absolute; z-index: 10; pointer-events: none; transition: opacity 0.3s ease; }
+/* Horizontal progress bar */
+.bar-h .scroll-progress { left: 57px; right: 57px; bottom: 0; width: auto; height: 2px; }
+/* Vertical progress bar */
+.bar-v .scroll-progress { top: 57px; bottom: 57px; right: 0; height: auto; width: 2px; }
+.scroll-progress-track { position: absolute; inset: 0; border-radius: 999px; background: #e3e3e3; }
+.scroll-progress-fill { position: absolute; left: 0; top: 0; border-radius: 999px; background: #222; }
+.bar-h .scroll-progress-fill { width: 0%; height: 100%; transition: width 0.1s linear; }
+.bar-v .scroll-progress-fill { width: 100%; height: 0%; transition: height 0.1s linear; }
+
+/* ========================================================= MAIN */
+.main-region { position: relative; z-index: 5; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: hidden; }
+
+/* ========================================================= EDGE HOTSPOT BAR CONTROLS */
+.bar-edge-hotspots {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  pointer-events: none;
+}
+
+.bar-edge-hotspot {
+  position: fixed;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  opacity: .38;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    width .22s cubic-bezier(.4,0,.2,1),
+    height .22s cubic-bezier(.4,0,.2,1),
+    background .22s ease,
+    color .18s ease,
+    opacity .18s ease,
+    box-shadow .22s ease;
+}
+
+.bar-edge-hotspot svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.7;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(.8);
+  transition: opacity .18s ease, transform .22s ease;
+}
+
+/* Thin, almost invisible handles. */
+.bar-edge-hotspot-top,
+.bar-edge-hotspot-bottom {
+  left: 50%;
+  width: 7px;
+  height: 3px;
+  transform: translateX(-50%);
+}
+.bar-edge-hotspot-top { top: 0; border-radius: 0 0 999px 999px; }
+.bar-edge-hotspot-bottom { bottom: 0; border-radius: 999px 999px 0 0; }
+
+.bar-edge-hotspot-left,
+.bar-edge-hotspot-right {
+  top: 50%;
+  width: 3px;
+  height: 7px;
+  transform: translateY(-50%);
+}
+.bar-edge-hotspot-left { left: 0; border-radius: 0 999px 999px 0; }
+.bar-edge-hotspot-right { right: 0; border-radius: 999px 0 0 999px; }
+
+/* Hover/focus/touch target expands into a subtle handle. */
+.bar-edge-hotspot:hover,
+.bar-edge-hotspot:focus-visible,
+.bar-edge-hotspot.is-touch-active {
+  background: rgba(0,0,0,.08);
+  color: #555;
+  opacity: 1;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.05);
+}
+
+/* Touch devices have no hover state: give each edge a persistent,
+   transparent hit area while keeping the visual handle minimal. */
+@media (hover: none), (pointer: coarse) {
+  .bar-edge-hotspot {
+    opacity: .72;
+    background: rgba(0,0,0,.055);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .bar-edge-hotspot-top,
+  .bar-edge-hotspot-bottom {
+    width: 72px;
+    height: 34px;
+  }
+
+  .bar-edge-hotspot-left,
+  .bar-edge-hotspot-right {
+    width: 34px;
+    height: 72px;
+  }
+
+  .bar-edge-hotspot svg {
+    opacity: .52;
+    transform: scale(1);
+  }
+
+  .bar-edge-hotspot.is-open svg {
+    opacity: .55;
+    transform: scale(1);
+  }
+}
+
+.bar-edge-hotspot-top:hover,
+.bar-edge-hotspot-top:focus-visible,
+.bar-edge-hotspot-top.is-touch-active,
+.bar-edge-hotspot-bottom:hover,
+.bar-edge-hotspot-bottom:focus-visible,
+.bar-edge-hotspot-bottom.is-touch-active {
+  width: 58px;
+  height: 18px;
+}
+.bar-edge-hotspot-left:hover,
+.bar-edge-hotspot-left:focus-visible,
+.bar-edge-hotspot-left.is-touch-active,
+.bar-edge-hotspot-right:hover,
+.bar-edge-hotspot-right:focus-visible,
+.bar-edge-hotspot-right.is-touch-active {
+  width: 18px;
+  height: 58px;
+}
+
+.bar-edge-hotspot:hover svg,
+.bar-edge-hotspot:focus-visible svg,
+.bar-edge-hotspot.is-touch-active svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Once a bar is open, its edge hotspot gets out of the way.
+   The in-bar X is now the close affordance, so nothing floats over the bar. */
+.bar-edge-hotspot.is-open {
+  opacity: 0 !important;
+  pointer-events: none;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.bar-edge-hotspot.is-open svg {
+  opacity: 0 !important;
+}
+
+@media (max-width: 600px) {
+  .bar-edge-hotspot-top,
+  .bar-edge-hotspot-bottom {
+    width: 10px;
+    height: 4px;
+  }
+  .bar-edge-hotspot-left,
+  .bar-edge-hotspot-right {
+    width: 4px;
+    height: 10px;
+  }
+}
+
+/* ========================================================= EDGE HOTSPOT BAR CONTROLS END */
+
+/* ========================================================= FLOATING PANEL */
+.floating-panel { position: relative; width: min(1180px, 100%); min-height: 100%; margin: 0 auto; padding: clamp(36px, 7vw, 78px); border: 1px solid #dedede; border-radius: 26px; background: #fff; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #bbb transparent; }
+.floating-panel::-webkit-scrollbar { width: 7px; }
+.floating-panel::-webkit-scrollbar-track { background: transparent; }
+.floating-panel::-webkit-scrollbar-thumb { background: #bbb; border-radius: 999px; }
+.floating-panel.is-fullpage { border-radius: 26px; border: 1px solid #dedede; width: 100%; max-width: none; padding: clamp(60px, 10vw, 120px) clamp(36px, 7vw, 78px) clamp(36px, 7vw, 78px); }
+
+/* ========================================================= CONTENT */
+.kicker { margin-bottom: 14px; font-size: 10px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: #999; }
+h1 { margin: 0; font-size: clamp(38px, 7vw, 76px); line-height: .94; letter-spacing: -.055em; color: #111; }
+.description { max-width: 650px; margin-top: 26px; font-size: 15px; line-height: 1.7; color: #777; }
+
+/* ========================================================= EXPANDED PANEL — SINGLE-PANE ROUTE MAP */
+.navigation-expanded { position: fixed; z-index: 1500; top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); right: max(10px, env(safe-area-inset-right)); bottom: max(10px, env(safe-area-inset-bottom)); display: none; flex-direction: column; padding: 5px; border: 1px solid #dedede; border-radius: 19px; background: #fff; overflow: hidden; opacity: 0; transform: scale(.96); transition: opacity .25s ease, transform .25s cubic-bezier(.4,0,.2,1); }
+.navigation-expanded.open { display: flex; opacity: 1; transform: scale(1); }
+.navigation-expanded-header { flex: 0 0 48px; height: 48px; display: flex; align-items: center; }
+.navigation-expanded-title { flex: 1; min-width: 0; padding: 0 12px; font-size: 12px; font-weight: 700; color: #111; }
+.navigation-expanded-close { flex: 0 0 48px; width: 48px; height: 48px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 13px; background: transparent; color: #222; cursor: pointer; }
+.navigation-expanded-close:hover { background: #f1f1f1; }
+.navigation-expanded-close svg { width: 17px; height: 17px; }
+.expanded-body { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+.expanded-drill { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+/* Terminal-style route map: intentionally text-only, no Lucide icons. */
+.expanded-breadcrumb { position: relative; z-index: 4; flex: 0 0 38px; min-height: 38px; display: flex; align-items: center; gap: 0; padding: 0 12px; border-bottom: 1px solid #e8e8e8; overflow-x: auto; overflow-y: hidden; white-space: nowrap; font: 500 10px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; letter-spacing: .01em; }
+.expanded-breadcrumb::-webkit-scrollbar { display: none; }
+.expanded-route-prefix { color: #999; flex: 0 0 auto; }
+.expanded-crumb { flex: 0 0 auto; display: inline-flex; align-items: center; height: 28px; padding: 0 2px; border: 0; border-radius: 4px; background: transparent; color: #777; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; line-height: 1.2; font-weight: 500; cursor: pointer; }
+.expanded-crumb:hover { color: #111; background: #f5f5f5; }
+.expanded-crumb.current { color: #111; font-weight: 500; }
+.expanded-route-ellipsis { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin: 0 1px; padding: 0; border: 0; border-radius: 5px; background: transparent; color: #777; font: 500 12px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; cursor: pointer; }
+.expanded-route-ellipsis:hover { background: #f1f1f1; color: #111; }
+.expanded-route-map-backdrop { position: absolute; z-index: 20; inset: 0; display: none; background: rgba(255,255,255,.42); }
+.expanded-route-map-backdrop.open { display: block; }
+.expanded-route-map { position: absolute; z-index: 21; top: 58px; left: 12px; right: 12px; width: min(560px, calc(100% - 24px)); max-height: calc(100dvh - 120px); display: none; flex-direction: column; overflow: hidden; border: 1px solid #ddd; border-radius: 12px; background: #fff; box-shadow: 0 14px 38px rgba(0,0,0,.12); }
+.expanded-route-map.open { display: flex; }
+.expanded-route-map-header { flex: 0 0 38px; display: flex; align-items: center; padding: 0 12px; border-bottom: 1px solid #eee; color: #777; font: 500 10px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.expanded-route-map-list { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 7px; scrollbar-width: thin; }
+.expanded-route-map-row { display: flex; align-items: center; width: 100%; min-height: 34px; padding: 5px 8px; border: 0; border-radius: 6px; background: transparent; color: #444; text-align: left; font: 500 11px/1.25 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; cursor: pointer; }
+.expanded-route-map-row:hover { background: #f4f4f4; color: #111; }
+.expanded-route-map-row.current { background: #f1f1f1; color: #111; }
+.expanded-route-map-level { flex: 0 0 30px; min-width: 30px; height: 22px; display: inline-flex; align-items: center; justify-content: center; margin-right: 9px; border-radius: 999px; background: #f1f1f1; color: #777; font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.expanded-route-map-row.current .expanded-route-map-level { background: #111; color: #fff; }
+.expanded-route-map-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 600px) {
+  .expanded-route-map { top: 54px; left: 7px; right: 7px; width: calc(100% - 14px); max-height: calc(100dvh - 100px); }
+}
+.expanded-crumb-sep { flex: 0 0 auto; padding: 0 5px; color: #c5c5c5; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 10px; line-height: 1.2; font-weight: 500; }
+.expanded-drill-viewport { flex: 1; min-height: 0; overflow: hidden; position: relative; }
+.expanded-drill-track { height: 100%; display: flex; transition: transform .35s cubic-bezier(.4,0,.2,1); will-change: transform; }
+.expanded-drill-page { flex: 0 0 100%; min-width: 0; overflow-y: auto; overflow-x: hidden; padding: 7px 10px; scrollbar-width: thin; }
+.expanded-drill-page::-webkit-scrollbar { width: 4px; }
+.expanded-drill-page::-webkit-scrollbar-thumb { background: #ddd; border-radius: 999px; }
+.expanded-drill-item { display: flex; align-items: center; gap: 9px; width: 100%; padding: 8px 9px; margin-bottom: 2px; border: 0; border-radius: 8px; background: transparent; color: #333; text-align: left; cursor: pointer; font-family: inherit; font-size: 13.5px; line-height: 1.25; font-weight: 400; transition: background .16s ease, color .16s ease, transform .12s ease; }
+.expanded-drill-item:hover { background: #f5f5f5; color: #111; }
+.expanded-drill-item:active { transform: scale(.99); }
+.expanded-drill-item.is-hidden { color: #aaa; }
+.expanded-drill-item .nested-drag { width: 13px; height: 13px; color: #aaa; opacity: .42; cursor: grab; flex-shrink: 0; }
+.expanded-drill-item:hover .nested-drag { opacity: 1; }
+.expanded-drill-item-icon { width: 16px; height: 16px; color: #666; stroke-width: 1.8; flex-shrink: 0; }
+.expanded-drill-item-label { flex: 1; min-width: 0; font-weight: 400; }
+.expanded-drill-move { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 26px; min-height: 26px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #777; cursor: pointer; }
+.expanded-drill-move:hover { background: #f1f1f1; color: #111; }
+.expanded-drill-move svg { width: 13px; height: 13px; stroke-width: 1.8; pointer-events: none; }
+.expanded-drill-move.is-target { background: #111; color: #fff; border-color: #111; }
+.expanded-drill-delete { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 26px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #aaa; cursor: pointer; }
+.expanded-drill-delete:hover { background: #f1f1f1; color: #555; }
+.expanded-drill-delete svg { width: 13px; height: 13px; stroke-width: 1.8; pointer-events: none; }
+.expanded-drill-visibility { flex: 0 0 20px; width: 20px; height: 20px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 4px; background: transparent; color: #999; cursor: pointer; }
+.expanded-drill-visibility:hover { background: #e9e9e9; color: #333; }
+.expanded-drill-visibility svg { width: 17px; height: 17px; stroke-width: 1.9; pointer-events: none; }
+.expanded-drill-visibility.is-on { color: #111; }
+.expanded-drill-visibility.is-off { color: #bbb; }
+.expanded-drill-item.is-dragging { opacity: .4; background: #e0e0e0; }
+.expanded-drill-item.is-dragover { background: #f1f1f1; outline: 2px dashed #111; outline-offset: -2px; }
+.expanded-drill-empty { padding: 24px 12px; color: #aaa; font-size: 11px; }
+/* ========================================================= CUSTOM MENUS / COMPOSER */
+.expanded-create-menu { flex: 0 0 auto; height: 32px; display: inline-flex; align-items: center; gap: 6px; margin-right: 4px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: #666; font: 500 11px/1 inherit; cursor: pointer; }
+.expanded-create-menu:hover { background: #f2f2f2; color: #111; }
+.expanded-create-menu svg { width: 14px; height: 14px; stroke-width: 1.8; }
+.expanded-drill-toolbar { flex: 0 0 40px; display: flex; align-items: center; gap: 5px; padding: 4px 10px; border-bottom: 1px solid #eee; overflow-x: auto; }
+.expanded-drill-tool { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px; height: 29px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: #777; font: 500 10.5px/1 inherit; cursor: pointer; }
+.expanded-drill-tool:hover { background: #f3f3f3; color: #111; }
+.expanded-drill-tool svg { width: 13px; height: 13px; stroke-width: 1.8; }
+.expanded-builder-backdrop, .expanded-picker-backdrop { position: absolute; z-index: 40; inset: 0; display: none; background: rgba(255,255,255,.5); }
+.expanded-builder-backdrop.open, .expanded-picker-backdrop.open { display: block; }
+.expanded-builder, .expanded-picker { position: absolute; z-index: 41; left: 50%; top: 50%; width: min(420px, calc(100% - 28px)); max-height: min(560px, calc(100% - 28px)); transform: translate(-50%, -50%) scale(.98); display: none; flex-direction: column; overflow: hidden; border: 1px solid #ddd; border-radius: 14px; background: #fff; box-shadow: 0 18px 50px rgba(0,0,0,.14); }
+.expanded-builder.open, .expanded-picker.open { display: flex; transform: translate(-50%, -50%) scale(1); }
+.expanded-builder-head { flex: 0 0 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px 0 14px; border-bottom: 1px solid #eee; }
+.expanded-builder-kicker { color: #999; font: 600 8px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; letter-spacing: .12em; }
+.expanded-builder-title { margin-top: 5px; color: #111; font-size: 13px; font-weight: 600; }
+.expanded-builder-close { width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: #555; cursor: pointer; }
+.expanded-builder-close:hover { background: #f1f1f1; color: #111; }
+.expanded-builder-close svg { width: 15px; height: 15px; }
+.expanded-builder-body, .expanded-picker-body { padding: 14px; }
+.expanded-builder-label { display: block; margin-bottom: 6px; color: #777; font-size: 10px; font-weight: 600; }
+.expanded-builder-input { width: 100%; height: 38px; padding: 0 11px; border: 1px solid #ddd; border-radius: 8px; outline: 0; background: #fff; color: #111; font: 400 12px/1 inherit; }
+.expanded-builder-input:focus { border-color: #999; box-shadow: 0 0 0 2px #eee; }
+.expanded-builder-actions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 12px; }
+.expanded-builder-secondary, .expanded-builder-primary { height: 34px; padding: 0 11px; border-radius: 8px; font: 500 10.5px/1 inherit; cursor: pointer; }
+.expanded-builder-secondary { border: 0; background: #f3f3f3; color: #555; }
+.expanded-builder-primary { border: 0; background: #111; color: #fff; }
+.expanded-picker { width: min(520px, calc(100% - 28px)); }
+.expanded-picker-body { display: flex; flex-direction: column; min-height: 0; gap: 9px; }
+.expanded-picker-list { max-height: 390px; overflow: auto; scrollbar-width: thin; }
+.expanded-picker-row { width: 100%; min-height: 40px; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 0; border-radius: 7px; background: transparent; color: #444; text-align: left; cursor: pointer; }
+.expanded-picker-row:hover { background: #f3f3f3; color: #111; }
+.expanded-picker-row-icon { width: 15px; height: 15px; color: #777; flex: 0 0 auto; }
+.expanded-picker-row-main { min-width: 0; flex: 1; }
+.expanded-picker-row-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 400; }
+.expanded-picker-row-path { display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #aaa; font: 500 9px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.expanded-picker-empty { padding: 18px 8px; color: #aaa; font-size: 10.5px; text-align: center; }
+.expanded-drill-custom-badge { flex: 0 0 auto; padding: 3px 5px; border-radius: 4px; background: #f2f2f2; color: #888; font: 600 8px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+
+@media (max-width: 600px) {
+  .expanded-breadcrumb { flex-basis: 36px; min-height: 36px; padding: 0 9px; }
+  .expanded-drill-page { padding: 6px 7px; }
+  .expanded-drill-item { padding: 8px 7px; }
+}
+
+/* ========================================================= MOBILE */
+@media (max-width: 600px) {
+  .app { padding: max(7px, env(safe-area-inset-top)) max(7px, env(safe-area-inset-right)) max(7px, env(safe-area-inset-bottom)) max(7px, env(safe-area-inset-left)); }
+  .floating-panel { padding: 42px 22px 60px; border-radius: 22px; }
+  .floating-panel.is-fullpage { padding: clamp(50px, 12vw, 100px) 22px 60px; }
+  .navigation-expanded { top: max(7px, env(safe-area-inset-top)); left: max(7px, env(safe-area-inset-left)); right: max(7px, env(safe-area-inset-right)); bottom: max(7px, env(safe-area-inset-bottom)); border-radius: 17px; }
+  .dept-list-pane { flex: 0 0 160px; width: 160px; min-width: 160px; }
+}
+
+/* ========================================================= REDUCED MOTION */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+}
+
+
+/* ========================================================= BAR CLOSE CONTROL */
+/* Close is a real flex item, exactly like Expand — it reserves its own space
+   so navigation icons can never slide underneath it. */
+.bar-manual-close {
+  position: relative;
+  z-index: 5;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  opacity: 1;
+  transition: background .16s ease, color .16s ease, transform .16s ease, opacity .3s ease, width .35s cubic-bezier(0.4,0,0.2,1), height .35s cubic-bezier(0.4,0,0.2,1), flex-basis .35s cubic-bezier(0.4,0,0.2,1);
+}
+.bar-manual-close:hover { background: #f1f1f1; color: #111; }
+.bar-manual-close:active { transform: scale(.9); }
+.bar-manual-close:focus-visible { outline: 2px solid #111; outline-offset: -4px; }
+.bar-manual-close svg { width: 18px; height: 18px; stroke-width: 1.8; pointer-events: none; }
+
+/* Keep the close control reserved but invisible while the bar is collapsed. */
+.bar-h.is-closed .bar-manual-close,
+.bar-v.is-closed .bar-manual-close {
+  opacity: 0;
+  pointer-events: none;
+  flex-basis: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* Control placement: Expand and Close always occupy opposite ends. */
+.bar-h .bar-expand { order: 1; }
+.bar-h .bar-nav-area { order: 2; }
+.bar-h .bar-manual-close { order: 3; }
+
+.bar-v .bar-expand { order: 1; }
+.bar-v .bar-nav-area { order: 2; }
+.bar-v .bar-manual-close { order: 3; flex: 0 0 42px; }
+
+/* ========================================================= LUCIDE CHECKBOXES */
+.dept-list-checkbox {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #aaa;
+  cursor: pointer;
+  line-height: 0;
+  flex-shrink: 0;
+  transition: background .16s ease, color .16s ease, transform .12s ease;
+}
+.dept-list-checkbox:hover { background: #f1f1f1; color: #555; }
+.dept-list-checkbox:active { transform: scale(.9); }
+.dept-list-checkbox:focus-visible { outline: 2px solid #111; outline-offset: 1px; }
+.dept-list-checkbox svg { width: 18px; height: 18px; stroke-width: 1.9; pointer-events: none; }
+.dept-list-checkbox[aria-pressed="true"] { color: #111; }
+.dept-list-item.focused .dept-list-checkbox { color: rgba(255,255,255,.55); }
+.dept-list-item.focused .dept-list-checkbox[aria-pressed="true"] { color: #fff; }
+
+@media (hover: none), (pointer: coarse) {
+  .bar-manual-close {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+    border-radius: 12px;
+    background: transparent;
+  }
+  .bar-manual-close svg { width: 18px; height: 18px; }
+  .dept-list-checkbox { width: 20px; height: 20px; flex-basis: 20px; }
+  .dept-list-checkbox svg { width: 18px; height: 18px; }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .bar-edge-hotspot.is-open {
+    opacity: 0 !important;
+    pointer-events: none;
+    background: transparent;
+  }
+  .bar-edge-hotspot.is-open svg {
+    opacity: 0 !important;
+  }
+}
+
+
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- ── TOP BAR ─────────────────────────────────────────── -->
+  <div class="bar-region bar-h bar-top" id="topBarRegion" data-barid="top">
+    <nav class="bar-wrapper" id="topBarWrapper" aria-label="Top navigation">
+      <div class="bar-nav-area" id="topBarNavArea">
+        <div class="bar-scroll" id="topBarScroll" role="menubar" aria-label="Top navigation items"></div>
+      </div>
+      <button class="bar-expand" id="topBarExpand" type="button" aria-label="Open department browser">
+        <i data-lucide="maximize-2"></i>
+      </button>
+      <button class="bar-manual-close" id="topBarClose" type="button" data-close-bar="top" aria-label="Close top bar" title="Close top bar">
+        <i data-lucide="x"></i>
+      </button>
+    </nav>
+    <div class="scroll-progress" aria-hidden="true">
+      <div class="scroll-progress-track"></div>
+      <div class="scroll-progress-fill" id="topProgressFill"></div>
+    </div>
+  </div>
+  <div class="bar-gap" id="topBarGap" aria-hidden="true"></div>
+
+  <!-- ── MIDDLE ROW ─────────────────────────────────────── -->
+  <div class="middle-row" id="middleRow">
+
+    <!-- LEFT BAR -->
+    <div class="bar-region bar-v bar-left" id="leftBarRegion" data-barid="left">
+      <nav class="bar-wrapper" id="leftBarWrapper" aria-label="Left navigation">
+        <div class="bar-nav-area" id="leftBarNavArea">
+          <div class="bar-scroll" id="leftBarScroll" role="menubar" aria-label="Left navigation items"></div>
+        </div>
+      <button class="bar-manual-close" id="leftBarClose" type="button" data-close-bar="left" aria-label="Close left bar" title="Close left bar">
+          <i data-lucide="x"></i>
+        </button>
+        <button class="bar-expand" id="leftBarExpand" type="button" aria-label="Open department browser" title="Manage left bar">
+          <i data-lucide="maximize-2"></i>
+        </button>
+      
+    </nav>
+      <div class="scroll-progress" aria-hidden="true">
+        <div class="scroll-progress-track"></div>
+        <div class="scroll-progress-fill" id="leftProgressFill"></div>
+      </div>
+    </div>
+    <div class="bar-gap" id="leftBarGap" aria-hidden="true"></div>
+
+    <!-- MAIN -->
+    <main class="main-region" id="mainRegion">
+      <section class="floating-panel is-fullpage" id="mainContent">
+        <div class="bar-edge-hotspots" aria-label="Navigation bar controls">
+          <button class="bar-edge-hotspot bar-edge-hotspot-top" type="button"
+                  data-barid="top" aria-label="Open top bar" title="Top bar">
+            <i data-lucide="panel-top"></i>
+          </button>
+          <button class="bar-edge-hotspot bar-edge-hotspot-left" type="button"
+                  data-barid="left" aria-label="Open left bar" title="Left bar">
+            <i data-lucide="panel-left"></i>
+          </button>
+          <button class="bar-edge-hotspot bar-edge-hotspot-right" type="button"
+                  data-barid="right" aria-label="Open right bar" title="Right bar">
+            <i data-lucide="panel-right"></i>
+          </button>
+          <button class="bar-edge-hotspot bar-edge-hotspot-bottom" type="button"
+                  data-barid="bottom" aria-label="Open bottom bar" title="Bottom bar">
+            <i data-lucide="panel-bottom"></i>
+          </button>
+        </div>
+        <div class="kicker">Navigation System</div>
+        <h1>Simple.<br>Clean. Flat.</h1>
+        <p class="description">Four navigation bars live at the edges of your workspace — top, right, bottom, and left. Each one is independent and always stays fully expanded, showing its navigation icons directly in the bar.</p>
+        <p class="description" style="margin-top:16px;">Open any bar's department browser to manage its visibility, choose which departments appear, reorder them by dragging, and toggle individual items on or off. Every bar remembers its own selection.</p>
+        <p class="description" style="margin-top:16px; color: #aaa; font-size: 13px;">Tip — use the bar controls at the top of the department browser to show or hide any navigation bar.</p>
+      </section>
+    </main>
+
+    <div class="bar-gap" id="rightBarGap" aria-hidden="true"></div>
+    <!-- RIGHT BAR -->
+    <div class="bar-region bar-v bar-right" id="rightBarRegion" data-barid="right">
+      <nav class="bar-wrapper" id="rightBarWrapper" aria-label="Right navigation">
+        <div class="bar-nav-area" id="rightBarNavArea">
+          <div class="bar-scroll" id="rightBarScroll" role="menubar" aria-label="Right navigation items"></div>
+        </div>
+        <button class="bar-expand" id="rightBarExpand" type="button" aria-label="Open department browser" title="Manage right bar">
+          <i data-lucide="maximize-2"></i>
+        </button>
+      <button class="bar-manual-close" id="rightBarClose" type="button" data-close-bar="right" aria-label="Close right bar" title="Close right bar">
+          <i data-lucide="x"></i>
+        </button>
+      
+    </nav>
+      <div class="scroll-progress" aria-hidden="true">
+        <div class="scroll-progress-track"></div>
+        <div class="scroll-progress-fill" id="rightProgressFill"></div>
+      </div>
+    </div>
+
+  </div><!-- /middle-row -->
+
+  <div class="bar-gap" id="bottomBarGap" aria-hidden="true"></div>
+  <!-- ── BOTTOM BAR ─────────────────────────────────────── -->
+  <div class="bar-region bar-h bar-bottom" id="bottomBarRegion" data-barid="bottom">
+    <nav class="bar-wrapper" id="bottomBarWrapper" aria-label="Bottom navigation">
+      <div class="bar-nav-area" id="bottomBarNavArea">
+        <div class="bar-scroll" id="bottomBarScroll" role="menubar" aria-label="Bottom navigation items"></div>
+      </div>
+      <button class="bar-expand" id="bottomBarExpand" type="button" aria-label="Open department browser">
+        <i data-lucide="maximize-2"></i>
+      </button>
+      <button class="bar-manual-close" id="bottomBarClose" type="button" data-close-bar="bottom" aria-label="Close bottom bar" title="Close bottom bar">
+        <i data-lucide="x"></i>
+      </button>
+    </nav>
+    <div class="scroll-progress" aria-hidden="true">
+      <div class="scroll-progress-track"></div>
+      <div class="scroll-progress-fill" id="bottomProgressFill"></div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ── EXPANDED NAVIGATION PANEL ─────────────────────── -->
+<div class="navigation-expanded" id="navigationExpanded" role="dialog" aria-modal="true" aria-labelledby="expandedNavigationTitle" aria-hidden="true">
+  <div class="navigation-expanded-header">
+    <div class="navigation-expanded-title" id="expandedNavigationTitle">Navigation</div>
+    <button class="navigation-expanded-close" id="expandedClose" type="button" aria-label="Close">
+      <i data-lucide="x"></i>
+    </button>
+  </div>
+  <div class="expanded-body">
+    <div class="expanded-drill" id="expandedDrill">
+      <div class="expanded-drill-viewport" id="expandedDrillViewport">
+        <div class="expanded-drill-track" id="expandedDrillTrack"></div>
+      </div>
+    </div>
+  </div>
+  <div class="expanded-route-map-backdrop" id="expandedRouteMapBackdrop" aria-hidden="true"></div>
+  <div class="expanded-route-map" id="expandedRouteMap" role="menu" aria-label="Full navigation route">
+    <div class="expanded-route-map-header">$ route map</div>
+    <div class="expanded-route-map-list" id="expandedRouteMapList"></div>
+  </div>
+
+  <div class="expanded-builder-backdrop" id="expandedBuilderBackdrop" aria-hidden="true"></div>
+  <div class="expanded-builder" id="expandedBuilder" role="dialog" aria-modal="true" aria-labelledby="expandedBuilderTitle" aria-hidden="true">
+    <div class="expanded-builder-head">
+      <div><div class="expanded-builder-kicker" id="expandedBuilderKicker">NEW MENU</div><div class="expanded-builder-title" id="expandedBuilderTitle">Create a new menu</div></div>
+      <button type="button" class="expanded-builder-close" id="expandedBuilderClose" aria-label="Close"><i data-lucide="x"></i></button>
+    </div>
+    <div class="expanded-builder-body">
+      <label class="expanded-builder-label" for="expandedBuilderName">Name</label>
+      <input id="expandedBuilderName" class="expanded-builder-input" type="text" maxlength="60" autocomplete="off" placeholder="e.g. My Workspace">
+      <label class="expanded-builder-label" for="expandedBuilderIcon" style="margin-top:10px">Lucide icon name</label>
+      <input id="expandedBuilderIcon" class="expanded-builder-input" type="text" maxlength="60" autocomplete="off" spellcheck="false" placeholder="e.g. zap, chart-no-axes-combined">
+      <div class="expanded-builder-actions"><button type="button" class="expanded-builder-secondary" id="expandedBuilderCancel">Cancel</button><button type="button" class="expanded-builder-primary" id="expandedBuilderSave">Create</button></div>
+    </div>
+  </div>
+
+  <div class="expanded-picker-backdrop" id="expandedPickerBackdrop" aria-hidden="true"></div>
+  <div class="expanded-picker" id="expandedPicker" role="dialog" aria-modal="true" aria-labelledby="expandedPickerTitle" aria-hidden="true">
+    <div class="expanded-builder-head">
+      <div><div class="expanded-builder-kicker">ADD EXISTING</div><div class="expanded-builder-title" id="expandedPickerTitle">Add from navigation</div></div>
+      <button type="button" class="expanded-builder-close" id="expandedPickerClose" aria-label="Close"><i data-lucide="x"></i></button>
+    </div>
+    <div class="expanded-picker-body"><input id="expandedPickerSearch" class="expanded-builder-input" type="search" autocomplete="off" placeholder="Search functions and sections"><div class="expanded-picker-list" id="expandedPickerList"></div></div>
+  </div>
+</div>
+
+<script>
+/* Swipe-to-open/close navigation bars */
+(() => {
+  let sx=0, sy=0, startBar=null, tracking=false;
+  const edge=44;
+  const edgeBar=(x,y)=> y<=edge ? "top" : x>=innerWidth-edge ? "right" : y>=innerHeight-edge ? "bottom" : x<=edge ? "left" : null;
+  document.addEventListener("pointerdown",e=>{ if(e.pointerType!=="mouse"){sx=e.clientX;sy=e.clientY;startBar=edgeBar(sx,sy);tracking=!!startBar;}},{passive:true});
+  document.addEventListener("pointerup",e=>{
+    if(!tracking||e.pointerType==="mouse")return; tracking=false;
+    const dx=e.clientX-sx,dy=e.clientY-sy; if(Math.max(Math.abs(dx),Math.abs(dy))<55)return;
+    let open=(startBar==="top"&&dy>0)||(startBar==="bottom"&&dy<0)||(startBar==="left"&&dx>0)||(startBar==="right"&&dx<0);
+    let close=(startBar==="top"&&dy<0)||(startBar==="bottom"&&dy>0)||(startBar==="left"&&dx<0)||(startBar==="right"&&dx>0);
+    if(open){if(!barState[startBar].visible)setBarVisible(startBar,true);requestAnimationFrame(()=>{setBarOpen(startBar,true);updateBarEdgeHotspots();});}
+    else if(close&&barState[startBar].visible){setBarOpen(startBar,false);updateBarEdgeHotspots();}
+  },{passive:true});
+})();
+
+
+/* ========================================================= DATA */
+const departments = [
+  {
+    id: "core", name: "Core", icon: "home",
+    items: [
+      { icon: "home",             label: "Home",      hidden: false },
+      { icon: "layout-dashboard", label: "Dashboard", hidden: false },
+      { icon: "search",           label: "Search",    hidden: false },
+      { icon: "sliders-horizontal", label: "Control", hidden: false, moveIn: true, children: [
+        { icon: "refresh-cw", label: "Refresh" },
+        { icon: "user-plus", label: "Register" },
+        { icon: "folder-plus", label: "New Folder", moveIn: true, children: [
+          { icon: "folder-plus", label: "Create", moveIn: true, children: [
+            { icon: "file-plus-2", label: "Create Here" },
+            { icon: "layout-list", label: "Choose Layout" }
+          ] },
+          { icon: "folder-input", label: "Move", moveIn: true, children: [
+            { icon: "arrow-right", label: "Move Here" },
+            { icon: "corner-up-left", label: "Move Back" }
+          ] },
+          { icon: "folder-tree", label: "Organize", moveIn: true, children: [
+            { icon: "list", label: "Sort" },
+            { icon: "layers-3", label: "Group" },
+            { icon: "ungroup", label: "Ungroup" }
+          ] }
+        ] },
+        { icon: "move", label: "Move Icons", moveIn: true, children: [
+          { icon: "mouse-pointer-2", label: "Select" },
+          { icon: "arrow-right", label: "Move Here" },
+          { icon: "arrow-left", label: "Move Back" }
+        ] },
+        { icon: "layout-grid", label: "Arrange", moveIn: true, children: [
+          { icon: "grid-2x2", label: "Grid" },
+          { icon: "list", label: "List" },
+          { icon: "align-justify", label: "Align" }
+        ] },
+        { icon: "palette", label: "Appearance", moveIn: true, children: [
+          { icon: "sun", label: "Theme", moveIn: true, children: [
+            { icon: "sun", label: "Light" },
+            { icon: "moon", label: "Dark" },
+            { icon: "monitor", label: "System" }
+          ] },
+          { icon: "type", label: "Typography" },
+          { icon: "panel-top", label: "Density" }
+        ] },
+        { icon: "layout-template", label: "Layout", moveIn: true, children: [
+          { icon: "panels-top-left", label: "Navigation" },
+          { icon: "columns-3", label: "Columns" },
+          { icon: "maximize-2", label: "Workspace" }
+        ] }
+      ] }
+    ]
+  },
+  {
+    id: "communication", name: "Comms", icon: "message-circle",
+    items: [
+      { icon: "bell",           label: "Notifications", hidden: false, moveIn: true, children: [ { icon: "bell-ring", label: "Alerts" }, { icon: "settings-2", label: "Rules" } ] },
+      { icon: "message-circle", label: "Messages",      hidden: false, moveIn: true, children: [ { icon: "inbox", label: "Inbox" }, { icon: "send", label: "Sent" } ] },
+      { icon: "mail",           label: "Mail",          hidden: false },
+      { icon: "calendar",       label: "Calendar",      hidden: false }
+    ]
+  },
+  {
+    id: "files", name: "Files", icon: "folder",
+    items: [
+      { icon: "folder",   label: "Files",     hidden: false, moveIn: true, children: [ { icon: "folder-open", label: "Documents" }, { icon: "archive", label: "Archive" } ] },
+      { icon: "image",    label: "Media",     hidden: false, moveIn: true, children: [ { icon: "image-plus", label: "Images" }, { icon: "video", label: "Video" } ] },
+      { icon: "bookmark", label: "Bookmarks", hidden: false, moveIn: true, children: [ { icon: "bookmark-check", label: "Saved" }, { icon: "tags", label: "Tags" } ] },
+      { icon: "star",     label: "Stars",     hidden: false, moveIn: true, children: [ { icon: "star-half", label: "Priority" }, { icon: "sparkles", label: "Highlights" } ] }
+    ]
+  },
+  {
+    id: "analytics", name: "Analytics", icon: "bar-chart-3",
+    items: [
+      { icon: "bar-chart-3",            label: "Analytics", hidden: false, moveIn: true, children: [ { icon: "activity", label: "Overview" }, { icon: "trending-up", label: "Trends" } ] },
+      { icon: "chart-no-axes-combined", label: "Reports",   hidden: false, moveIn: true, children: [ { icon: "file-chart-column", label: "Summary" }, { icon: "file-bar-chart", label: "Detailed" } ] },
+      { icon: "users",                  label: "Users",     hidden: false, moveIn: true, children: [ { icon: "user-round", label: "Members" }, { icon: "shield-check", label: "Roles" } ] }
+    ]
+  },
+  {
+    id: "commerce", name: "Commerce", icon: "shopping-cart",
+    items: [
+      { icon: "package",      label: "Products",  hidden: false },
+      { icon: "shopping-cart",label: "Cart",      hidden: false },
+      { icon: "credit-card",  label: "Payments",  hidden: false },
+      { icon: "wallet",       label: "Wallet",    hidden: false },
+      { icon: "clock-3",      label: "History",   hidden: false },
+      { icon: "map-pin",      label: "Locations", hidden: false },
+      { icon: "globe",        label: "Explore",   hidden: false }
+    ]
+  },
+  {
+    id: "system", name: "System", icon: "settings",
+    items: [
+      { icon: "settings",           label: "Settings", hidden: false },
+      { icon: "sliders-horizontal", label: "Controls", hidden: false },
+      { icon: "help-circle",        label: "Help",     hidden: false }
+    ]
+  }
+];
+
+/* 50-level nesting test fixture: one container at each depth. */
+(() => {
+  const core = departments.find(d => d.id === "core");
+  if (!core) return;
+  let parent = null;
+  for (let i = 1; i <= 50; i++) {
+    const node = {
+      icon: "folder",
+      label: `Level ${String(i).padStart(2, "0")}`,
+      hidden: false,
+      moveIn: true,
+      children: []
+    };
+    if (parent) parent.children.push(node);
+    else core.items.push(node);
+    parent = node;
+  }
+})();
+
+/* ========================================================= BAR CONFIGURATION */
+const BAR_IDS = ["top", "right", "bottom", "left"];
+
+const BAR_CONFIG = {
+  top:    { isV: false },
+  right:  { isV: true  },
+  bottom: { isV: false },
+  left:   { isV: true  }
+};
+
+/* Bar-level state */
+const barState = {
+  top:    { visible: true, open: false, selectedDeptIds: ["core"],          activeItemKey: null, nestedStack: [] },
+  right:  { visible: true, open: false, selectedDeptIds: ["communication"], activeItemKey: null, nestedStack: [] },
+  bottom: { visible: true, open: false, selectedDeptIds: ["files"],         activeItemKey: null, nestedStack: [] },
+  left:   { visible: true, open: false, selectedDeptIds: ["analytics"],     activeItemKey: null, nestedStack: [] }
+};
+
+/* ========================================================= ELEMENT REFS */
+const barEls = {};
+BAR_IDS.forEach(id => {
+  const cap = id[0].toUpperCase() + id.slice(1);
+  barEls[id] = {
+    region:    document.getElementById(`${id}BarRegion`),
+    wrapper:   document.getElementById(`${id}BarWrapper`),
+    navArea:   document.getElementById(`${id}BarNavArea`),
+    scroll:    document.getElementById(`${id}BarScroll`),
+    expand:    document.getElementById(`${id}BarExpand`),
+    manualClose: document.getElementById(`${id}BarClose`),
+    progFill:  document.getElementById(`${id}ProgressFill`),
+    gap:       document.getElementById(`${id}BarGap`),
+  };
+});
+
+const navigationExpanded = document.getElementById("navigationExpanded");
+const expandedClose       = document.getElementById("expandedClose");
+const expandedTitle       = document.getElementById("expandedNavigationTitle");
+
+/* Expanded panel state */
+let currentExpandedBarId = null;
+let dragSourceIndex      = null;
+
+/* ========================================================= BUILD BAR ICONS */
+function buildBar(barId) {
+  const state  = barState[barId];
+  const scroll = barEls[barId].scroll;
+  const cfg    = BAR_CONFIG[barId];
+  scroll.innerHTML = "";
+
+  // At depth 0 we show the selected departments. At deeper levels we show
+  // the children of the item that was entered at the previous level.
+  const stack = state.nestedStack || [];
+  let items = [];
+  let parentKey = null;
+
+  if (stack.length) {
+    items = stack[stack.length - 1].items || [];
+    parentKey = stack[stack.length - 1].key;
+  } else {
+    const selected = departments.filter(d => state.selectedDeptIds.includes(d.id));
+    selected.forEach((dept, deptIdx) => {
+      if (deptIdx > 0) {
+        const div = document.createElement("div");
+        div.className = "dept-divider";
+        div.setAttribute("aria-hidden", "true");
+        scroll.appendChild(div);
+      }
+      dept.items.forEach((item, itemIdx) => {
+        if (item.hidden) return;
+        appendNavItem(scroll, barId, item, `${dept.id}::${itemIdx}`);
+      });
+    });
+  }
+
+  if (stack.length) {
+    items.forEach((item, index) => {
+      if (item.hidden) return;
+      appendNavItem(scroll, barId, item, `${parentKey}::${index}`);
+    });
+  }
+
+  if (!scroll.children.length) {
+    const hint = document.createElement("div");
+    hint.style.cssText = cfg.isV
+      ? "width:52px;height:32px;display:grid;place-items:center;"
+      : "width:32px;height:52px;display:grid;place-items:center;";
+    hint.setAttribute("aria-hidden", "true");
+    scroll.appendChild(hint);
+  }
+
+  barEls[barId].region.classList.toggle("bar-nested-active", stack.length > 0);
+  updateNestedCloseControl(barId);
+  lucide.createIcons();
+  requestAnimationFrame(() => updateScrollProgress(barId));
+}
+
+function appendNavItem(scroll, barId, item, key) {
+  const state = barState[barId];
+  const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = `icon-item${state.activeItemKey === key ? " active" : ""}${hasChildren ? " has-children" : ""}`;
+  btn.dataset.key = key;
+  btn.setAttribute("role", "menuitem");
+  btn.setAttribute("aria-label", item.label);
+  btn.title = item.label;
+  btn.innerHTML = `<i data-lucide="${item.icon}"></i>`;
+
+  btn.addEventListener("click", () => {
+    if (hasChildren) {
+      state.nestedStack.push({ key, label: item.label, icon: item.icon, items: item.children });
+      state.activeItemKey = null;
+      transitionNestedBar(barId, "forward");
+      return;
+    }
+    state.activeItemKey = key;
+    buildBar(barId);
+  });
+  scroll.appendChild(btn);
+}
+
+function transitionNestedBar(barId, direction = "forward") {
+  const scroll = barEls[barId].scroll;
+  scroll.classList.add("nested-transition", "nested-leaving");
+  requestAnimationFrame(() => {
+    buildBar(barId);
+    scroll.classList.remove("nested-leaving");
+    if (BAR_CONFIG[barId].isV) scroll.style.transform = direction === "forward" ? "translateY(10px)" : "translateY(-10px)";
+    else scroll.style.transform = direction === "forward" ? "translateX(10px)" : "translateX(-10px)";
+    requestAnimationFrame(() => { scroll.style.transform = "translate(0,0)"; });
+  });
+}
+
+function updateNestedCloseControl(barId) {
+  const btn = barEls[barId].manualClose;
+  if (!btn) return;
+  const nested = barState[barId].nestedStack.length > 0;
+  btn.innerHTML = `<i data-lucide="${nested ? (BAR_CONFIG[barId].isV ? "chevron-up" : "chevron-left") : "x"}"></i>`;
+  btn.setAttribute("aria-label", nested ? "Back one navigation level" : "Close navigation bar");
+  btn.title = nested ? "Back" : "Close";
+  lucide.createIcons();
+}
+
+function popNestedLevel(barId) {
+  const stack = barState[barId].nestedStack;
+  if (!stack.length) return false;
+  stack.pop();
+  barState[barId].activeItemKey = null;
+  transitionNestedBar(barId, "back");
+  return true;
+}
+/* ========================================================= SCROLL PROGRESS */
+function updateScrollProgress(barId) {
+  const scroll = barEls[barId].scroll;
+  const fill   = barEls[barId].progFill;
+  if (!fill) return;
+
+  if (BAR_CONFIG[barId].isV) {
+    const max    = Math.max(0, scroll.scrollHeight - scroll.clientHeight);
+    const ratio  = max > 0 ? Math.min(scroll.scrollTop, max) / max : 0;
+    fill.style.height = `${ratio * 100}%`;
+    scroll.classList.toggle("has-overflow", max > 0);
+  } else {
+    const max    = Math.max(0, scroll.scrollWidth - scroll.clientWidth);
+    const ratio  = max > 0 ? Math.min(scroll.scrollLeft, max) / max : 0;
+    fill.style.width = `${ratio * 100}%`;
+    scroll.classList.toggle("has-overflow", max > 0);
+  }
+}
+
+/* ========================================================= BAR STATE */
+function refreshBar(barId) {
+  if (!barState[barId].visible) return;
+  buildBar(barId);
+  requestAnimationFrame(() => updateScrollProgress(barId));
+}
+
+/* ========================================================= BAR OPEN / CLOSE */
+function setBarOpen(barId, open) {
+  const state = barState[barId];
+  const els = barEls[barId];
+  if (!state.visible) return;
+
+  state.open = Boolean(open);
+  els.region.classList.toggle("is-closed", !state.open);
+  if (els.gap) els.gap.classList.toggle("bar-closed", !state.open);
+
+  // Keep the selected navigation rendered behind the animated wrapper.
+  if (state.open) {
+    buildBar(barId);
+    requestAnimationFrame(() => updateScrollProgress(barId));
+  }
+}
+
+/* ========================================================= BAR VISIBILITY */
+function setBarVisible(barId, visible) {
+  const state = barState[barId];
+  const els = barEls[barId];
+  state.visible = Boolean(visible);
+
+  if (!state.visible) state.open = false;
+
+  els.region.classList.toggle("bar-off", !state.visible);
+  els.region.classList.toggle("is-closed", state.visible && !state.open);
+  if (els.gap) {
+    els.gap.classList.toggle("bar-off", !state.visible);
+    els.gap.classList.toggle("bar-closed", state.visible && !state.open);
+  }
+
+  if (state.visible) {
+    buildBar(barId);
+    requestAnimationFrame(() => updateScrollProgress(barId));
+  }
+}
+
+/* ========================================================= BAR VISIBILITY / EDGE LABELS */
+const BAR_LABELS = { top: "Top", right: "Right", bottom: "Bottom", left: "Left" };
+
+/* ========================================================= EXPANDED PANEL */
+function openExpandedNavigation(barId) {
+  currentExpandedBarId = barId;
+  expandedNestedStack = [];
+  buildExpandedPanel();
+  const cap = barId[0].toUpperCase() + barId.slice(1);
+  expandedTitle.textContent = `${cap} Bar — Navigation`;
+  navigationExpanded.classList.add("open");
+  navigationExpanded.setAttribute("aria-hidden", "false");
+  setTimeout(() => expandedClose.focus(), 0);
+}
+
+function closeExpandedNavigation() {
+  closeExpandedRouteMap();
+  closeBuilder();
+  closeExistingPicker();
+  navigationExpanded.classList.remove("open");
+  navigationExpanded.setAttribute("aria-hidden", "true");
+  if (currentExpandedBarId) {
+    buildBar(currentExpandedBarId);
+    currentExpandedBarId = null;
+    expandedNestedStack = [];
+  }
+}
+
+/* ── EXPANDED SINGLE-PANE DRILL-DOWN ───────────────────── */
+let expandedNestedStack = [];
+
+function getExpandedCurrentItems() {
+  if (!expandedNestedStack.length) return departments;
+  return expandedNestedStack[expandedNestedStack.length - 1].items || [];
+}
+
+function getExpandedNodeVisibility(item, depth) {
+  if (depth === 0) return barState[currentExpandedBarId].selectedDeptIds.includes(item.id);
+  return !item.hidden;
+}
+
+function setExpandedNodeVisibility(item, depth, visible) {
+  const state = barState[currentExpandedBarId];
+  if (depth === 0) {
+    const ids = state.selectedDeptIds;
+    const i = ids.indexOf(item.id);
+    if (visible && i === -1) ids.push(item.id);
+    if (!visible && i !== -1) ids.splice(i, 1);
+  } else {
+    item.hidden = !visible;
+  }
+}
+
+function closeExpandedRouteMap() {
+  const map = document.getElementById("expandedRouteMap");
+  const backdrop = document.getElementById("expandedRouteMapBackdrop");
+  if (map) map.classList.remove("open");
+  if (backdrop) {
+    backdrop.classList.remove("open");
+    backdrop.setAttribute("aria-hidden", "true");
+  }
+}
+
+function openExpandedRouteMap() {
+  const map = document.getElementById("expandedRouteMap");
+  const backdrop = document.getElementById("expandedRouteMapBackdrop");
+  const list = document.getElementById("expandedRouteMapList");
+  if (!map || !backdrop || !list) return;
+  list.innerHTML = "";
+
+  /*
+   * The route map is also the fast-forward navigator.  It contains the
+   * current ancestry plus every reachable descendant route, so a user at
+   * Level 07 can jump directly to Level 50 instead of entering 43 levels.
+   * Each entry carries the exact stack needed to reach that node.
+   */
+  const entries = [{ label: "root", depth: 0, stack: [] }];
+  const ancestorStack = expandedNestedStack.map(level => ({
+    key: level.key,
+    label: level.label,
+    items: level.items || []
+  }));
+
+  ancestorStack.forEach((level, index) => {
+    entries.push({
+      label: level.label,
+      depth: index + 1,
+      stack: ancestorStack.slice(0, index + 1)
+    });
+  });
+
+  function appendDescendants(items, baseStack) {
+    (items || []).forEach(item => {
+      const label = item.label || item.name || "Untitled";
+      const children = Array.isArray(item.children) ? item.children : [];
+      const nextStack = baseStack.concat([{
+        key: item.id || label,
+        label,
+        items: children
+      }]);
+      entries.push({
+        label,
+        depth: nextStack.length,
+        stack: nextStack
+      });
+      if (children.length) appendDescendants(children, nextStack);
+    });
+  }
+
+  /* From the current level, expose all forward destinations. */
+  appendDescendants(getExpandedCurrentItems(), ancestorStack);
+
+  /* Avoid duplicate ancestor/current entries when the current page itself
+     is also reachable through the descendant walk. */
+  const seen = new Set();
+  const uniqueEntries = entries.filter(entry => {
+    const key = entry.stack.map(level => level.key).join("\u001f") || "root";
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  uniqueEntries.forEach((level, index) => {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = `expanded-route-map-row${level.depth === expandedNestedStack.length ? " current" : ""}`;
+    row.setAttribute("role", "menuitem");
+    row.title = `Go to ${level.label}`;
+
+    const badge = document.createElement("span");
+    badge.className = "expanded-route-map-level";
+    badge.textContent = String(level.depth).padStart(2, "0");
+    badge.setAttribute("aria-hidden", "true");
+
+    const label = document.createElement("span");
+    label.className = "expanded-route-map-label";
+    label.textContent = level.label;
+
+    row.append(badge, label);
+    row.addEventListener("click", () => {
+      const wasDepth = expandedNestedStack.length;
+      expandedNestedStack = level.stack.map(item => ({
+        key: item.key,
+        label: item.label,
+        items: item.items || []
+      }));
+      closeExpandedRouteMap();
+      buildExpandedDrill(true, level.depth > wasDepth ? "forward" : "back");
+    });
+    list.appendChild(row);
+  });
+
+  map.classList.add("open");
+  backdrop.classList.add("open");
+  backdrop.setAttribute("aria-hidden", "false");
+}
+
+function buildExpandedBreadcrumb() {
+  const viewport = document.getElementById("expandedDrillViewport");
+  if (!viewport) return;
+  const existing = document.getElementById("expandedBreadcrumb");
+  if (existing) existing.remove();
+
+  const route = document.createElement("div");
+  route.id = "expandedBreadcrumb";
+  route.className = "expanded-breadcrumb";
+  route.setAttribute("aria-label", "Navigation route");
+
+  const prefix = document.createElement("span");
+  prefix.className = "expanded-route-prefix";
+  prefix.textContent = "$ route:";
+  route.appendChild(prefix);
+
+  const addCrumb = (label, index, current = false) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `expanded-crumb${current ? " current" : ""}`;
+    button.textContent = label;
+    button.addEventListener("click", () => {
+      if (index === -1) expandedNestedStack = [];
+      else if (index < expandedNestedStack.length - 1) expandedNestedStack = expandedNestedStack.slice(0, index + 1);
+      else return;
+      closeExpandedRouteMap();
+      buildExpandedDrill(true, "back");
+    });
+    route.appendChild(button);
+  };
+
+  addCrumb("root", -1, expandedNestedStack.length === 0);
+
+  if (expandedNestedStack.length <= 4) {
+    expandedNestedStack.forEach((level, index) => {
+      const sep = document.createElement("span");
+      sep.className = "expanded-crumb-sep";
+      sep.textContent = "/";
+      route.appendChild(sep);
+      addCrumb(level.label, index, index === expandedNestedStack.length - 1);
+    });
+  } else {
+    const sep = document.createElement("span");
+    sep.className = "expanded-crumb-sep";
+    sep.textContent = "/";
+    route.appendChild(sep);
+
+    const ellipsis = document.createElement("button");
+    ellipsis.type = "button";
+    ellipsis.className = "expanded-route-ellipsis";
+    ellipsis.textContent = "...";
+    ellipsis.setAttribute("aria-label", "Show full route map");
+    ellipsis.title = "Show full route";
+    ellipsis.addEventListener("click", openExpandedRouteMap);
+    route.appendChild(ellipsis);
+
+    const tailStart = Math.max(0, expandedNestedStack.length - 2);
+    for (let index = tailStart; index < expandedNestedStack.length; index++) {
+      const sepTail = document.createElement("span");
+      sepTail.className = "expanded-crumb-sep";
+      sepTail.textContent = "/";
+      route.appendChild(sepTail);
+      addCrumb(expandedNestedStack[index].label, index, index === expandedNestedStack.length - 1);
+    }
+  }
+
+  viewport.parentElement.insertBefore(route, viewport);
+}
+function buildExpandedDrill(animate = false, direction = "forward") {
+  const track = document.getElementById("expandedDrillTrack");
+  const viewport = document.getElementById("expandedDrillViewport");
+  if (!track || !viewport) return;
+
+  const previousDepth = Number(track.dataset.depth || 0);
+  const targetDepth = expandedNestedStack.length;
+  const pages = [departments];
+  expandedNestedStack.forEach(level => pages.push(level.items || []));
+  const sourceDepth = targetDepth;
+
+  const drill = document.getElementById("expandedDrill");
+  let toolbar = document.getElementById("expandedDrillToolbar");
+  if (!toolbar && drill) { toolbar = document.createElement("div"); toolbar.id = "expandedDrillToolbar"; toolbar.className = "expanded-drill-toolbar"; drill.insertBefore(toolbar, viewport); }
+  if (toolbar) {
+    toolbar.innerHTML = targetDepth === 0
+      ? `<button type="button" class="expanded-drill-tool" id="expandedNewMenuTool"><i data-lucide="plus"></i><span>New menu</span></button>`
+      : `<button type="button" class="expanded-drill-tool" id="expandedNewSectionTool"><i data-lucide="folder-plus"></i><span>New section</span></button><button type="button" class="expanded-drill-tool" id="expandedAddExistingTool"><i data-lucide="library"></i><span>Add existing</span></button>`;
+    const a = toolbar.querySelector("#expandedNewMenuTool"); if (a) a.addEventListener("click", () => openBuilder("menu"));
+    const b = toolbar.querySelector("#expandedNewSectionTool"); if (b) b.addEventListener("click", () => openBuilder("section"));
+    const c = toolbar.querySelector("#expandedAddExistingTool"); if (c) c.addEventListener("click", openExistingPicker);
+  }
+
+  track.innerHTML = "";
+
+  pages.forEach((items, pageIndex) => {
+    const page = document.createElement("div");
+    page.className = "expanded-drill-page";
+    let dragIndex = null;
+
+    items.forEach((item, itemIndex) => {
+      if (typeof item.hidden !== "boolean" && pageIndex > 0) item.hidden = false;
+      const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+      // Every container is a valid destination: departments at root, and any
+      // nested section that can contain children. Keep the explicit moveIn
+      // flag as an override for future data models.
+      const canMoveIn = pageIndex === 0 || hasChildren || item.moveIn === true;
+      const visible = getExpandedNodeVisibility(item, pageIndex);
+      const row = document.createElement("div");
+      row.className = `expanded-drill-item${visible ? "" : " is-hidden"}`;
+      row.draggable = true;
+      row.innerHTML = `
+        <i data-lucide="grip-vertical" class="nested-drag"></i>
+        <i data-lucide="${item.icon || "circle"}" class="expanded-drill-item-icon"></i>
+        <span class="expanded-drill-item-label">${item.label || item.name}</span>
+        ${canMoveIn ? '<button type="button" class="expanded-drill-move" aria-label="Move into this section"><i data-lucide="arrow-right"></i></button>' : ''}
+        ${(item.customMenu || item.customSection || item.shortcut) ? '<button type="button" class="expanded-drill-delete" aria-label="Remove from menu" title="Remove from menu"><i data-lucide="trash-2"></i></button>' : ''}
+        <button type="button" class="expanded-drill-visibility ${visible ? "is-on" : "is-off"}" aria-pressed="${visible}" title="${visible ? "Hide" : "Show"} ${item.label || item.name}" aria-label="${visible ? "Hide" : "Show"} ${item.label || item.name}">
+          <i data-lucide="${visible ? "square-check" : "square"}"></i>
+        </button>
+      `;
+
+      row.addEventListener("click", e => {
+        if (e.target.closest(".expanded-drill-visibility") || e.target.closest(".nested-drag")) return;
+        if (!canMoveIn) return;
+        const children = pageIndex === 0
+          ? (item.items || [])
+          : (item.children || []);
+        expandedNestedStack.push({
+          key: item.id || item.label || item.name,
+          label: item.label || item.name,
+          items: children
+        });
+        buildExpandedDrill(true, "forward");
+      });
+
+      row.querySelector(".expanded-drill-visibility").addEventListener("click", e => {
+        e.stopPropagation(); e.preventDefault();
+        setExpandedNodeVisibility(item, pageIndex, !visible);
+        buildExpandedDrill(false, direction);
+        if (currentExpandedBarId) buildBar(currentExpandedBarId);
+      });
+
+      const moveButton = row.querySelector(".expanded-drill-move");
+      if (moveButton) moveButton.addEventListener("click", e => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (!canMoveIn) return;
+
+        const children = pageIndex === 0
+          ? (item.items || [])
+          : (item.children || []);
+        expandedNestedStack.push({
+          key: item.id || item.label || item.name,
+          label: item.label || item.name,
+          items: children
+        });
+        buildExpandedDrill(true, "forward");
+      });
+
+      const deleteButton = row.querySelector(".expanded-drill-delete");
+      if (deleteButton) deleteButton.addEventListener("click", e => {
+        e.stopPropagation();
+        e.preventDefault();
+        const sourceItems = pageIndex === 0 ? departments : (expandedNestedStack[pageIndex - 1]?.items || []);
+        const idx = sourceItems.indexOf(item);
+        if (idx === -1) return;
+        sourceItems.splice(idx, 1);
+        // If a deleted custom container is currently in the active stack,
+        // step back to the nearest valid parent rather than leaving a stale route.
+        const deletedKey = item.id || item.label || item.name;
+        const stackIndex = expandedNestedStack.findIndex(level => level.key === deletedKey);
+        if (stackIndex !== -1) expandedNestedStack.splice(stackIndex);
+        buildExpandedDrill(false, "back");
+        if (currentExpandedBarId) {
+          const ids = barState[currentExpandedBarId].selectedDeptIds;
+          if (item.id) {
+            const idIndex = ids.indexOf(item.id);
+            if (idIndex !== -1) ids.splice(idIndex, 1);
+          }
+          buildBar(currentExpandedBarId);
+        }
+      });
+
+      row.addEventListener("dragstart", e => {
+        row.classList.add("is-dragging");
+        dragIndex = itemIndex;
+        e.dataTransfer.effectAllowed = "move";
+      });
+      row.addEventListener("dragend", () => {
+        row.classList.remove("is-dragging");
+        dragIndex = null;
+        page.querySelectorAll(".expanded-drill-item").forEach(r => r.classList.remove("is-dragover"));
+      });
+      row.addEventListener("dragover", e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; row.classList.add("is-dragover"); });
+      row.addEventListener("dragleave", () => row.classList.remove("is-dragover"));
+      row.addEventListener("drop", e => {
+        e.preventDefault(); row.classList.remove("is-dragover");
+        const from = dragIndex, to = itemIndex;
+        if (from === null || from === to) return;
+        const sourceItems = pageIndex === 0 ? departments : (expandedNestedStack[pageIndex - 1]?.items || []);
+        const [moved] = sourceItems.splice(from, 1);
+        sourceItems.splice(to, 0, moved);
+        buildExpandedDrill(false, direction);
+        if (currentExpandedBarId) buildBar(currentExpandedBarId);
+      });
+
+      page.appendChild(row);
+    });
+
+    if (!items.length) {
+      const empty = document.createElement("div");
+      empty.className = "expanded-drill-empty";
+      empty.textContent = "No functions at this level.";
+      page.appendChild(empty);
+    }
+    track.appendChild(page);
+  });
+
+  buildExpandedBreadcrumb();
+  track.dataset.depth = String(targetDepth);
+
+  requestAnimationFrame(() => {
+    if (animate && previousDepth !== targetDepth) {
+      track.style.transition = "none";
+      track.style.transform = direction === "back"
+        ? `translateX(-${Math.max(0, targetDepth + 1) * 100}%)`
+        : `translateX(-${Math.max(0, targetDepth - 1) * 100}%)`;
+      requestAnimationFrame(() => {
+        track.style.transition = "transform .35s cubic-bezier(.4,0,.2,1)";
+        track.style.transform = `translateX(-${targetDepth * 100}%)`;
+      });
+    } else {
+      track.style.transform = `translateX(-${targetDepth * 100}%)`;
+    }
+  });
+  lucide.createIcons();
+}
+
+let builderMode = "menu";
+let builderTargetItems = null;
+
+function makeCustomId(prefix) { return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`; }
+function getExpandedTargetItems() { return expandedNestedStack.length ? (expandedNestedStack[expandedNestedStack.length - 1].items || []) : departments; }
+
+function openBuilder(mode = "menu") {
+  builderMode = mode; builderTargetItems = getExpandedTargetItems();
+  const panel = document.getElementById("expandedBuilder"), backdrop = document.getElementById("expandedBuilderBackdrop"), input = document.getElementById("expandedBuilderName"), iconInput = document.getElementById("expandedBuilderIcon");
+  if (!panel || !backdrop || !input) return;
+  document.getElementById("expandedBuilderKicker").textContent = mode === "menu" ? "NEW MENU" : "NEW SECTION";
+  document.getElementById("expandedBuilderTitle").textContent = mode === "menu" ? "Create a new menu" : "Create a new section";
+  input.value = "";
+  if (iconInput) iconInput.value = "";
+  panel.classList.add("open"); backdrop.classList.add("open"); panel.setAttribute("aria-hidden","false"); backdrop.setAttribute("aria-hidden","false");
+  requestAnimationFrame(() => input.focus());
+}
+function closeBuilder() { const p=document.getElementById("expandedBuilder"), b=document.getElementById("expandedBuilderBackdrop"); if(p){p.classList.remove("open");p.setAttribute("aria-hidden","true");} if(b){b.classList.remove("open");b.setAttribute("aria-hidden","true");} }
+function commitBuilder() {
+  const input=document.getElementById("expandedBuilderName"), iconInput=document.getElementById("expandedBuilderIcon");
+  if(!input || !builderTargetItems) return;
+  const name=input.value.trim();
+  if(!name){input.focus();return;}
+  const icon=(iconInput?.value || "").trim() || "circle";
+  const node = builderMode === "menu"
+    ? { id: makeCustomId("menu"), icon, name, label: name, hidden: false, moveIn: true, items: [], customMenu: true }
+    : { id: makeCustomId("section"), icon, name, label: name, hidden: false, moveIn: true, children: [], customSection: true };
+  builderTargetItems.push(node);
+  if(builderMode === "menu" && currentExpandedBarId){const ids=barState[currentExpandedBarId].selectedDeptIds;if(!ids.includes(node.id))ids.push(node.id);}
+  closeBuilder(); buildExpandedDrill(false); if(currentExpandedBarId) buildBar(currentExpandedBarId);
+}
+function collectSourceNodes() {
+  const out = [];
+  const blocked = new Set(expandedNestedStack.map(level => level.key));
+
+  function walk(items, path, parentKind = "root") {
+    (items || []).forEach(item => {
+      const key = item.id || item.label || item.name;
+      const label = item.label || item.name || "Untitled";
+      const next = path.concat(label);
+      if (!blocked.has(key)) out.push({ item, path: next.join(" / "), key });
+
+      // Root containers use `items`; nested containers use `children`.
+      const nested = Array.isArray(item.items) ? item.items : (Array.isArray(item.children) ? item.children : []);
+      if (nested.length) walk(nested, next, Array.isArray(item.items) ? "container" : "nested");
+    });
+  }
+
+  walk(departments, []);
+  return out;
+}
+function openExistingPicker(){const p=document.getElementById("expandedPicker"),b=document.getElementById("expandedPickerBackdrop"),q=document.getElementById("expandedPickerSearch");if(!p||!b||!q)return;renderExistingPicker("");p.classList.add("open");b.classList.add("open");p.setAttribute("aria-hidden","false");b.setAttribute("aria-hidden","false");requestAnimationFrame(()=>q.focus());}
+function closeExistingPicker(){const p=document.getElementById("expandedPicker"),b=document.getElementById("expandedPickerBackdrop");if(p){p.classList.remove("open");p.setAttribute("aria-hidden","true");}if(b){b.classList.remove("open");b.setAttribute("aria-hidden","true");}}
+function renderExistingPicker(query=""){const list=document.getElementById("expandedPickerList");if(!list)return;const q=query.trim().toLowerCase();const sources=collectSourceNodes().filter(({item,path})=>{const label=(item.label||item.name||"").toLowerCase();return !q||label.includes(q)||path.toLowerCase().includes(q);});list.innerHTML="";if(!sources.length){list.innerHTML='<div class="expanded-picker-empty">No matching navigation items.</div>';return;}sources.forEach(({item,path})=>{const row=document.createElement("button");row.type="button";row.className="expanded-picker-row";row.innerHTML=`<i data-lucide="${item.icon||"circle"}" class="expanded-picker-row-icon"></i><span class="expanded-picker-row-main"><span class="expanded-picker-row-label"></span><span class="expanded-picker-row-path"></span></span>`;row.querySelector(".expanded-picker-row-label").textContent=item.label||item.name||"Untitled";row.querySelector(".expanded-picker-row-path").textContent=path;row.addEventListener("click",()=>addExistingShortcut(item,path));list.appendChild(row);});lucide.createIcons();}
+function addExistingShortcut(source, sourcePath) {
+  const target = getExpandedTargetItems();
+  if (!target) return;
+
+  // Preserve the source item's full subtree so a shortcut to a container can
+  // itself be drilled into. Root containers expose `items`; nested containers
+  // expose `children`.
+  const sourceChildren = Array.isArray(source.items) ? source.items : (Array.isArray(source.children) ? source.children : []);
+  const shortcut = {
+    id: makeCustomId("shortcut"),
+    icon: source.icon || "circle",
+    label: source.label || source.name || "Untitled",
+    hidden: false,
+    moveIn: sourceChildren.length > 0,
+    children: sourceChildren,
+    shortcut: true,
+    sourceId: source.id || null,
+    sourcePath
+  };
+
+  target.push(shortcut);
+  closeExistingPicker();
+  buildExpandedDrill(false);
+  if (currentExpandedBarId) buildBar(currentExpandedBarId);
+}
+function initCustomMenuEvents(){
+  const map={expandedBuilderClose:closeBuilder,expandedBuilderCancel:closeBuilder,expandedBuilderSave:commitBuilder,expandedBuilderBackdrop:closeBuilder,expandedPickerClose:closeExistingPicker,expandedPickerBackdrop:closeExistingPicker};
+  Object.entries(map).forEach(([id,fn])=>{const el=document.getElementById(id);if(el)el.addEventListener("click",fn);});
+  const q=document.getElementById("expandedPickerSearch");if(q)q.addEventListener("input",()=>renderExistingPicker(q.value));
+  const input=document.getElementById("expandedBuilderName"), iconInput=document.getElementById("expandedBuilderIcon");
+  [input, iconInput].forEach(el=>{if(el)el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commitBuilder();}else if(e.key==="Escape"){e.preventDefault();closeBuilder();}});});
+}
+
+function buildExpandedPanel() { buildExpandedDrill(false); }
+
+/* ========================================================= EVENT WIRING */
+initCustomMenuEvents();
+BAR_IDS.forEach(barId => {
+  const els = barEls[barId];
+
+  // Expand button — opens this bar's department browser.
+  els.expand.addEventListener("click", () => openExpandedNavigation(barId));
+
+  // Scroll progress
+  els.scroll.addEventListener("scroll", () => updateScrollProgress(barId), { passive: true });
+});
+
+// Minimal edge hotspots — click/tap a screen edge to open or close that bar.
+// The hotspots remain available even when a bar is hidden by the expanded browser.
+
+/* Manual per-bar close buttons */
+document.querySelectorAll(".bar-manual-close").forEach(btn => {
+  btn.addEventListener("click", e => {
+    e.stopPropagation();
+    const barId = btn.dataset.closeBar;
+    if (!barState[barId].visible) return;
+    if (popNestedLevel(barId)) return;
+    barState[barId].activeItemKey = null;
+    setBarOpen(barId, false);
+    updateBarEdgeHotspots();
+  });
+});
+
+const barEdgeHotspots = document.querySelectorAll(".bar-edge-hotspot");
+
+function updateBarEdgeHotspots() {
+  barEdgeHotspots.forEach(btn => {
+    const state = barState[btn.dataset.barid];
+    btn.classList.toggle("is-open", state.visible && state.open);
+    btn.classList.toggle("is-hidden", !state.visible);
+    btn.setAttribute(
+      "aria-label",
+      `${state.visible && state.open ? "Close" : "Open"} ${BAR_LABELS[btn.dataset.barid]} bar`
+    );
+    btn.title = `${state.visible && state.open ? "Close" : "Open"} ${BAR_LABELS[btn.dataset.barid]} bar`;
+  });
+}
+
+barEdgeHotspots.forEach(btn => {
+  btn.addEventListener("pointerdown", () => {
+    btn.classList.add("is-touch-active");
+    setTimeout(() => btn.classList.remove("is-touch-active"), 450);
+  });
+
+  btn.addEventListener("touchend", e => {
+    e.preventDefault();
+    btn.click();
+  }, { passive: false });
+
+  btn.addEventListener("click", () => {
+    const barId = btn.dataset.barid;
+    const state = barState[barId];
+
+    if (!state.visible) {
+      setBarVisible(barId, true);
+      requestAnimationFrame(() => {
+        setBarOpen(barId, true);
+        updateBarEdgeHotspots();
+      });
+      return;
+    }
+
+    if (state.open) {
+      state.nestedStack = [];
+      state.activeItemKey = null;
+    }
+    setBarOpen(barId, !state.open);
+    updateBarEdgeHotspots();
+  });
+});
+
+// Expanded panel close
+expandedClose.addEventListener("click", closeExpandedNavigation);
+const expandedRouteMapBackdrop = document.getElementById("expandedRouteMapBackdrop");
+if (expandedRouteMapBackdrop) expandedRouteMapBackdrop.addEventListener("click", closeExpandedRouteMap);
+navigationExpanded.addEventListener("click", e => { if (e.target === navigationExpanded) closeExpandedNavigation(); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && navigationExpanded.classList.contains("open")) closeExpandedNavigation();
+});
+
+// Resize
+window.addEventListener("resize", () => {
+  BAR_IDS.forEach(id => { if (barState[id].visible) requestAnimationFrame(() => updateScrollProgress(id)); });
+});
+
+/* ========================================================= INIT */
+lucide.createIcons();
+BAR_IDS.forEach(id => {
+  if (barState[id].visible) {
+    setBarVisible(id, true);
+  }
+});
+updateBarEdgeHotspots();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+# Template: complete constraint ledger
+workload: ""
+plan: free
+
+cloudflare:
+  workers:
+    requests_per_day: 100000
+    cpu_ms_per_invocation: 10
+    memory_mb: 128
+    external_subrequests_per_invocation: 50
+    internal_service_subrequests_per_invocation: 1000
+    worker_size_mib: 64
+    startup_cpu_seconds: 1
+    max_request_body_mb: 100
+  workflows:
+    cpu_ms_per_step: 10
+    nonstream_step_result_mib: 1
+    event_payload_mib: 1
+    persisted_state_mb: 100
+    steps_per_instance: 1024
+    running_instances: 100
+    creation_rate_per_sec: 100
+    queued_instances: 100000
+    executions_per_day: 100000
+    included_steps_per_day: 3000
+  r2:
+    object_max_tib: 5
+    single_put_max_gib: 5
+    multipart_part_min_mib: 5
+    multipart_part_max_gib: 5
+    multipart_max_parts: 10000
+    same_key_write_rate_per_sec: 1
+
+workload_budget:
+  jobs_per_day:
+  batches_per_job:
+  workflow_instances_per_job:
+  steps_per_job:
+  r2_reads_per_batch:
+  r2_writes_per_batch:
+  cpu_ms_per_batch:
+  memory_mb_per_batch:
+  largest_step_result_mib:
+  largest_r2_object_mib:

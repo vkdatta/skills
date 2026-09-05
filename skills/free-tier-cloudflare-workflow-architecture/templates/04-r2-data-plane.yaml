@@ -1,0 +1,34 @@
+# Template: R2 data-plane design
+
+job_prefix: jobs/{jobId}/
+
+objects:
+  job_spec:
+    key: "{job}/job.json"
+    purpose: compact immutable specification
+
+  batch_output:
+    key: "{job}/batches/{batchId}/result.json"
+    writer: one BatchWorker
+    shared_key: false
+
+  completion_marker:
+    key: "{job}/waves/{waveId}/done.json"
+    writer: one FanOutWorkflow
+
+  merge_shard:
+    key: "{job}/merge/shard-{n}.json"
+    writer: one MergeWorker step
+
+  final:
+    key: "{job}/final/output"
+    upload_mode: single-put-or-multipart
+
+rules:
+  - never append concurrently to one key
+  - never use R2 as an unbounded row-per-object store
+  - use deterministic keys
+  - store checksums/schema/version in manifests
+  - use single PUT for small objects
+  - use multipart only when justified
+  - never mistake multipart 5 MiB part minimum for object minimum

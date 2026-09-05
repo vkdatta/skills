@@ -1,0 +1,50 @@
+name: recursive-navigation-workspace
+display_name: Recursive Navigation Workspace
+version: 1.0.0
+description: >
+  A cross-model, tool-agnostic UI implementation skill for building recursive,
+  user-configurable navigation systems with invisible edge openers, animated
+  bars, arbitrary-depth drill-down, route maps, expanded editing, and custom
+  menus that can compose items from any existing hierarchy.
+compatibility:
+  type: cross_platform_instruction_skill
+  targets:
+    - ChatGPT
+    - Kimi
+    - Grok
+    - DeepSeek
+    - Gemini
+    - Claude
+    - Other agents
+activation:
+  automatic: true
+  persistent_within_task: true
+scope:
+  include:
+    - navigation
+    - sidebar
+    - toolbar
+    - menu
+    - drill_down
+    - recursive_hierarchy
+    - expanded_navigation
+    - custom_menu
+    - responsive_ui
+    - interaction_design
+    - navigation_refactor
+    - navigation_feature
+priority:
+  visual_behavior: template_html
+  interaction_behavior: skill_rules
+  source_truth: implementation
+  runtime_truth: observed_runtime
+architecture:
+  hierarchy: recursive
+  depth_limit: none
+  item_model: unified
+  route_map: numbered_scrollable
+  custom_menus: composable
+  icon_system: lucide/override by user
+  edge_openers: invisible
+  duplicate_controls: forbidden
+  department_section_split: forbidden

@@ -31,6 +31,6 @@ canvas/
 
 ## Core behavior
 
-`CANVAS` automatically activates for architecture-sensitive software work, creates `ARCHITECTURE.md` when no architecture map exists, uses that map to select the minimum relevant dependency closure, and updates the map whenever the change alters project architecture.
+`CANVAS` automatically activates for architecture-sensitive software work, creates `canvas_xd.md` when no architecture map exists, uses that map to select the minimum relevant dependency closure, and updates the map whenever the change alters project architecture.
 
 Pure filesystem/package operations such as copy, duplicate, zip, unzip, upload, download, move, rename, delete, and list are explicitly outside the activation scope unless they also change architecture.

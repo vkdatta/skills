@@ -1,0 +1,116 @@
+# Machine-readable audit checklist
+
+viewport:
+  - desktop-wide
+  - desktop
+  - tablet-landscape
+  - tablet-portrait
+  - mobile-landscape
+  - mobile-portrait
+  - narrow
+  - short-height
+  - tall-height
+
+ui:
+  browser_native:
+    - buttons
+    - checkboxes
+    - radios
+    - selects
+    - range
+    - inputs
+    - dialogs
+    - validation
+    - scrollbars
+    - tap-highlight
+    - selection-color
+  spacing:
+    - outer-margin
+    - inner-padding
+    - sibling-gap
+    - icon-text-gap
+    - section-rhythm
+    - fixed-surface-clearance
+    - safe-area
+  alignment:
+    - icons
+    - labels
+    - baselines
+    - controls
+    - grids
+    - toolbars
+    - navigation
+  typography:
+    - line-length
+    - line-height
+    - wrapping
+    - truncation
+    - localization
+
+interaction:
+  - direct-entry
+  - touch-targets
+  - focus
+  - keyboard
+  - hover
+  - pressed
+  - selected
+  - disabled
+  - loading
+  - error
+  - success
+
+functionality:
+  - create
+  - read
+  - update
+  - delete
+  - search
+  - filter
+  - sort
+  - selection
+  - navigation
+  - persistence
+  - refresh
+  - retry
+  - undo-redo
+  - duplicate-prevention
+
+accessibility:
+  - contrast
+  - semantics
+  - labels
+  - focus-visible
+  - keyboard-order
+  - status-announcements
+  - reduced-motion
+  - zoom-reflow
+  - touch-targets
+
+performance:
+  - frame-budget-120hz
+  - frame-budget-60hz
+  - long-tasks
+  - layout-thrashing
+  - rerenders
+  - scroll
+  - animation
+  - image-work
+  - canvas-if-present
+  - lifecycle-cleanup
+
+architecture:
+  - duplicate-ui
+  - duplicate-functions
+  - shared-components
+  - shared-helpers
+  - design-tokens
+  - file-size
+  - module-boundaries
+  - circular-dependencies
+
+specialized_skills:
+  - discover-installed-skills
+  - reuse-rnw-if-present
+  - reuse-canvas-if-present
+  - reuse-other-applicable-skills
