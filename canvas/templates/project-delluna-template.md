@@ -1,0 +1,271 @@
+- DELLUNA ADMIN WORKER
+  - Runtime
+    - Cloudflare Workers
+    - R2: `COMMIT_BUCKET`
+    - Workflows:
+      - `COMMIT_WORKFLOW`
+      - `COMMIT_FAN_OUT_WORKFLOW`
+      - `COMMIT_BATCH_WORKFLOW`
+    - GitHub = permanent source of truth
+    - R2 = temporary publish staging / coordination
+    - Registry = sharded metadata/index
+
+  - MODULES
+    - `worker.js`
+      - HTTP router / authentication gate
+      - imports shared core helpers
+      - imports admin handlers
+      - imports commit API handlers
+      - imports registry handlers
+      - re-exports Workflow classes from `commit-workflows.js`
+      - routes:
+        - GET `/health`
+        - GET `/registry`
+        - GET `/registry/index`
+        - GET `/workflow-status`
+        - GET `/workflow-progress`
+        - GET `/status`
+        - POST `/rebuild`
+        - POST `/analyze`
+        - POST `/commit`
+        - POST `/commit/prepare`
+        - PUT `/commit/file`
+        - POST `/commit/start`
+        - POST `/edit`
+        - POST `/rename-bulk`
+        - POST `/delete`
+        - POST `/folder`
+        - POST `/folder/rename`
+        - POST `/folder/delete`
+        - POST `/move`
+        - POST `/copy`
+      - global error response:
+        - `error` + `message`
+
+    - `core.js`
+      - shared constants
+      - CORS / response helpers
+      - authentication
+      - SHA-256 / base64 / SVG normalization
+      - GitHub API client
+      - repository/ref helpers
+      - `getHead`
+      - repository file/blob/tree/commit helpers
+      - concurrency helper
+      - commit constants
+      - commit R2 key generation
+      - publish mode validation
+      - Workflow not-found detection
+      - error-message normalization
+      - traced R2 GET/PUT
+      - traced Workflow creation
+      - exports ONLY symbols actually declared here
+
+    - `svg.js`
+      - upload path safety/canonicalization
+      - batch byte calculation
+      - safe names / unique names
+      - title generation
+      - registry entry lookup/indexing
+      - SVG validation
+      - upload-path validation
+      - upload reading
+      - imports shared SVG limits/hash/normalization from `core.js`
+      - exports ONLY symbols actually declared here
+
+    - `registry.js`
+      - registry shard loading/merging
+      - registry GET endpoint
+      - registry index endpoint
+      - shard key calculation
+      - registry blob-count estimation
+      - registry tree-entry generation
+      - current shard discovery
+      - registry + Git tree commit
+      - folder normalization/path helpers
+      - exports ONLY symbols actually declared here
+
+    - `admin.js`
+      - analyze
+      - workflow status
+      - folder create/rename/delete
+      - move/copy
+      - icon edit/delete
+      - bulk rename
+      - rebuild
+      - repository status
+      - uses `core.js` + `svg.js` + `registry.js`
+      - all mutations commit registry/tree to GitHub
+
+    - `commit-api.js`
+      - legacy commit endpoint (disabled)
+      - batch metadata persistence
+      - `/commit/prepare`
+      - `/commit/file`
+      - `/commit/start`
+      - publish idempotency
+      - batch/index/path/size/mode validation
+      - traced stages:
+        - `[COMMIT][PREPARE][GET_EXISTING_JOB]`
+        - `[COMMIT][PREPARE][PUT_BATCH_META]`
+        - `[COMMIT][PREPARE][PUT_JOB]`
+        - `[COMMIT][FILE][PUT_DATA]`
+        - `[COMMIT][START][GET_JOB]`
+        - `[COMMIT][START][WORKFLOW_CREATE]`
+      - Workflow lookup only treats genuine not-found as absence
+      - Workflow creation errors propagate
+
+    - `commit-workflows.js`
+      - commit preparation
+      - commit-file validation
+      - GitHub blob creation
+      - cleanup
+      - `CommitBatchWorkflow`
+      - `CommitFanOutWorkflow`
+      - `CommitWorkflow`
+      - EXACTLY ONE declaration/export for each Workflow class
+      - helper exports are separate and non-duplicated
+
+  - PUBLISH STATE MACHINE
+    - Phase 0 — upload
+      - client creates `instanceId`
+      - `/commit/file`
+        - writes `commit-jobs/{instanceId}/data/{index}`
+    - Phase 1 — prepare metadata
+      - `/commit/prepare`
+      - validates complete file-index coverage
+      - validates contiguous batch indexes
+      - validates canonical paths/actions/sizes
+      - writes batch metadata
+      - writes job
+    - Phase 2 — start
+      - `/commit/start`
+      - checks existing Workflow/idempotency state
+      - loads job
+      - creates `CommitWorkflow`
+    - Phase 3 — analysis
+      - `CommitWorkflow` launches analysis FanOut
+      - analysis Batch Workflows:
+        - validate/read SVGs
+        - write `batch-analysis-{batchIndex}` marker
+        - WAIT for `resolved-{batchIndex}`
+      - analysis FanOut waits for ANALYSIS MARKERS
+      - MUST NOT require Batch Workflow completion here
+      - writes `wave-done-{wave}` after analysis markers exist
+    - Phase 4 — resolve/prepare
+      - coordinator reads analysis markers
+      - resolves registry/name/path decisions
+      - writes `resolved-{batchIndex}`
+      - writes `prepared`
+    - Phase 5 — blob creation
+      - previously paused Batch Workflows resume after `resolved-*`
+      - blob creation in bounded/concurrent batches
+      - writes batch/blob completion markers
+      - blob FanOut waits for actual Batch Workflow completion
+    - Phase 6 — final commit
+      - coordinator collects `batch-entries-*`
+      - merges registry/tree changes
+      - creates Git commit/tree
+      - updates branch
+    - Phase 7 — cleanup
+      - removes temporary R2 job/data/meta/resolution/progress artifacts
+
+  - R2 KEY MODEL
+    - `commit-jobs/{instanceId}/job`
+    - `commit-jobs/{instanceId}/data/{fileIndex}`
+    - `commit-jobs/{instanceId}/meta/{batchIndex}`
+    - `commit-jobs/{instanceId}/resolved/{batchIndex}`
+    - `commit-jobs/{instanceId}/prepared`
+    - `commit-jobs/{instanceId}/progress`
+    - `commit-jobs/{instanceId}/batch-analysis-{batchIndex}`
+    - `commit-jobs/{instanceId}/batch-entries-{batchIndex}`
+    - `commit-jobs/{instanceId}/blob-done-{batchIndex}`
+    - `commit-jobs/{instanceId}/wave-done-{wave}`
+
+  - PUBLISH INVARIANTS
+    - batch indexes contiguous from `0`
+    - every file index appears exactly once
+    - no duplicate destination paths
+    - record path/action/size must match authoritative arrays
+    - file data keys are server-derived
+    - analysis completion != Workflow completion
+    - resolution must exist before blob creation continues
+    - blob phase may use Workflow completion
+    - Workflow API failures must not become false `complete`
+    - only genuine Workflow not-found may be treated as absent/expired
+
+  - MODULE DEPENDENCY GRAPH
+    - `worker.js`
+      - → `core.js`
+      - → `admin.js`
+      - → `commit-api.js`
+      - → `registry.js`
+      - → re-export `commit-workflows.js` Workflows
+    - `admin.js`
+      - → `core.js`
+      - → `svg.js`
+      - → `registry.js`
+    - `commit-api.js`
+      - → `core.js`
+      - → `svg.js`
+    - `commit-workflows.js`
+      - → `core.js`
+      - → `svg.js`
+      - → `registry.js`
+    - `registry.js`
+      - → `core.js`
+      - → `svg.js`
+    - `svg.js`
+      - → `core.js`
+    - `core.js`
+      - → external Cloudflare Workflow APIs only
+
+  - EXPORT RULES
+    - one declaration per symbol
+    - one export owner per implementation
+    - Workflow classes:
+      - defined/exported in `commit-workflows.js`
+      - re-exported by `worker.js`
+      - never redeclared in `worker.js`
+    - helper symbols exported only from their owning module
+    - consumers use imports; no duplicate local helper copies
+    - every imported local symbol must exist in the exporting module
+    - every exported symbol must have a declaration in the same module
+
+  - TRACE / OBSERVABILITY
+    - PREPARE
+      - GET existing job
+      - PUT batch metadata
+      - PUT job
+    - FILE
+      - PUT upload data
+    - START
+      - GET job
+      - CREATE Workflow
+    - WORKFLOW
+      - LOAD job
+    - errors
+      - always expose human-readable `message`
+      - preserve `error` field
+
+  - ADMIN / REGISTRY MODEL
+    - GitHub branch/ref is authoritative
+    - registry shards represent icon metadata
+    - CRUD operations:
+      - edit
+      - delete
+      - bulk rename
+      - create folder
+      - rename folder
+      - delete folder
+      - move
+      - copy
+      - rebuild
+      - status
+    - mutations:
+      - load registry
+      - validate collision/path rules
+      - construct Git tree changes
+      - update registry shards
+      - create commit
+      - update branch

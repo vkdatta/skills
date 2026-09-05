@@ -1,0 +1,60 @@
+name: canvas
+display_name: CANVAS — Contextual Adaptive Neural Visual Architecture Schema
+version: 2.0.0
+description: >
+  Maintains a compact project architecture mindmap as an AI navigation schema.
+  Creates it when absent, uses it to select the minimum relevant dependency
+  closure for code changes, and synchronizes it after architecture-sensitive changes.
+compatibility:
+  type: cross_platform_instruction_skill
+  targets:
+    - ChatGPT
+    - Kimi
+    - Grok
+    - DeepSeek
+    - Gemini
+    - Claude
+    - Other agents
+activation:
+  automatic: true
+  persistent_within_task: true
+scope:
+  include:
+    - bug_fix
+    - patch
+    - debugging
+    - tracing
+    - refactor
+    - feature
+    - api_change
+    - module_change
+    - dependency_change
+    - workflow_change
+    - persistence_change
+    - build_change
+    - deployment_change
+  exclude:
+    - copy
+    - duplicate
+    - zip
+    - unzip
+    - upload
+    - download
+    - move
+    - rename
+    - delete
+    - list
+    - filesystem_only
+priority:
+  navigation: canvas_xd
+  behavior: source
+  build_truth: actual_build
+  runtime_truth: observed_runtime
+architecture:
+  default_filename: canvas_xd.md
+  accepted_filenames: canvas_xd.md
+  format: mindmap
+  prose: false
+  auto_create: true
+  auto_update: true
+  duplicate_files: false
